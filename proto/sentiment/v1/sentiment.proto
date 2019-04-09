@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package hayovanloon.protoworkflow.sentiment.v1;
+
+import "google/api/annotations.proto";
+
+option java_multiple_files = true;
+option java_package = "nl.hayovanloon.protoworkflow.sentiment";
+
+
+service Sentiment {
+
+    rpc GetMessageSentiment(GetMessageSentimentRequest) returns (GetMessageSentimentResponse) {
+        option (google.api.http) = {
+            get: "/sentiment/messages"
+        };
+    }
+}
+
+
+message GetMessageSentimentRequest {
+    string sender = 1;
+    string message = 2;
+    int32 product_id = 3;
+}
+
+message GetMessageSentimentResponse {
+    GetMessageSentimentRequest request = 1;
+    float score = 2;
+}

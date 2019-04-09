@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package hayovanloon.protoworkflow.contact.v1;
+
+import "google/api/annotations.proto";
+
+option java_multiple_files = true;
+option java_package = "nl.hayovanloon.protoworkflow.contact";
+
+
+service Contact {
+
+    rpc PostMessage(PostMessageRequest) returns (PostMessageResponse) {
+        option (google.api.http) = {
+            post: "/contact/messages"
+            body: "*"
+        };
+    }
+}
+
+message PostMessageRequest {
+    string message = 1;
+    Sender sender = 2;
+
+    message Sender {
+        string email = 1;
+        string name = 2;
+        string title = 3;
+    }
+}
+
+message PostMessageResponse {
+    PostMessageRequest request = 1;
+}
