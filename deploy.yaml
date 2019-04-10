@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
         - name: sentiment
-          image: protoworkflow_sentiment
+          image: protoworkflow_sentiment_grpc
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
@@ -67,7 +67,8 @@ spec:
     spec:
       containers:
         - name: contact
-          image: protoworkflow_sentiment
+          image: protoworkflow_contact_grpc
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
+
