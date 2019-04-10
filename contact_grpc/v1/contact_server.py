@@ -6,6 +6,8 @@ import contact_pb2
 import contact_pb2_grpc
 
 
+PORT = 50051
+
 class ContactServer(contact_pb2_grpc.ContactServicer):
 
     def PostMessage(self, request, context):
@@ -17,7 +19,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     contact_pb2_grpc.add_ContactServicer_to_server(ContactServer(), server)
 
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port('[::]:%s' % PORT)
     server.start()
     try:
         while True:

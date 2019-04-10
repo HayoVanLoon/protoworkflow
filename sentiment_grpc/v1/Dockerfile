@@ -4,7 +4,7 @@ RUN apk --update --no-cache add git protobuf
 
 WORKDIR /go/src/sentiment
 
-COPY v1/* ./
+COPY . .
 
 RUN go get -d -v ./...
 RUN go install -v ./...
