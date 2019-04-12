@@ -9,6 +9,7 @@ github.com/HayoVanLoon/go-generated v0.0.0-20190330122228-4b951608f3f3 h1:2tjUhj
 github.com/HayoVanLoon/go-generated v0.0.0-20190330122228-4b951608f3f3/go.mod h1:OrszWilxZSH2zRiBbsYyqYA4W2fraRYB6GDvBVTQe3A=
 github.com/HayoVanLoon/go-generated v0.0.0-20190330122701-ec465926b0ac h1:u3Rv2MEXvdjsAzKRHxztH7WjZ2LOjK/A/ohHVc1Yhhg=
 github.com/HayoVanLoon/go-generated v0.0.0-20190330122701-ec465926b0ac/go.mod h1:OrszWilxZSH2zRiBbsYyqYA4W2fraRYB6GDvBVTQe3A=
+github.com/HayoVanLoon/go-generated v0.0.0-20190412144006-fb94b8e43f06 h1:2j8hnaQTICBCg/w2kmZg9qvmRSsCKUCOLVOFnrdcpAU=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=

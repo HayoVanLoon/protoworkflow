@@ -1,7 +1,6 @@
-import grpc
-
 import contact_pb2
 import contact_pb2_grpc
+import grpc
 
 
 def main():

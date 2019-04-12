@@ -20,7 +20,7 @@ package main
 import (
 	"context"
 	"fmt"
-	pb "github.com/HayoVanLoon/go-generated/sentiment/v1"
+	pb "github.com/HayoVanLoon/go-generated/bobsknobshop/sentiment/v1"
 	"google.golang.org/grpc"
 	"log"
 	"time"
@@ -40,7 +40,7 @@ func getConn() (*grpc.ClientConn, error) {
 }
 
 func getMessageSentiment(m string) error {
-	r := &pb.GetMessageSentimentRequest{Message: m}
+	r := &pb.GetSentimentRequest{Text: m}
 
 	conn, err := getConn()
 	defer func() {
@@ -54,7 +54,7 @@ func getMessageSentiment(m string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := c.GetMessageSentiment(ctx, r)
+	resp, err := c.GetSentiment(ctx, r)
 
 	log.Printf("%v\n", resp)
 
