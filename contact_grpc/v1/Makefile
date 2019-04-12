@@ -1,17 +1,22 @@
 
 PROJECT_NAME := protoworkflow
-MODULE_NAME := sentiment
+MODULE_NAME := contact
 
 # VirtualEnv
 VENV_DIR := venv
 VENV := . $(VENV_DIR)/bin/activate
 
-# Protocol Buffer Variables (Python)
-ORGANISATION := protoworkflow
-MODULE := contact
+# Protocol Buffer Variables
+ORGANISATION := $(PROJECT_ORGANISATION)
+MODULE := $(MODULE_NAME)
 PROTO_VERSION := v1
-PROTO_SELF := ../../proto/$(PROJECT_ORGANISATION)/$(MODULE)/$(PROTO_VERSION)
-OUT := .
+PACKAGE_DIR := $(ORGANISATION)/$(MODULE)/$(PROTO_VERSION)
+PROTO_ROOT := ../../proto
+# Protocol Buffer Variables (Python)
+PYTHON_OUT := .
+# Protocol Buffer Variables (Go)
+GO_OUT := $(HOME)/go/src/github.com/HayoVanLoon/go-generated
+GO_GENERATED := $(GO_OUT)/$(PACKAGE_DIR)
 
 
 venv:
@@ -21,22 +26,27 @@ venv:
 
 dev-env: venv
 
-clean:
+clean: clean-protoc
 	rm -rf PLACEHOLDER_PREFIX.egg-info
 	rm -rf dist
 	rm -rf build
 
-protoc: venv
+clean-protoc:
+	rm -rf $(PYTHON_OUT)/*_pb2*.py
+	rm -rf $(GO_GENERATED)
+
+protoc: venv clean-protoc
 ifndef PROTO_GOOGLE_APIS
 	$(error PROTO_GOOGLE_APIS is not set, aborting)
 else
-	rm -rf *_pb2*.py
+	mkdir -p $(GO_OUT)
 	$(VENV); python -m grpc_tools.protoc \
-		--python_out=$(OUT) \
-		--grpc_python_out=$(OUT) \
+		--python_out=$(PYTHON_OUT) \
+		--grpc_python_out=$(PYTHON_OUT) \
+		--go_out="plugins=grpc:$(GO_OUT)" \
 		-I$(PROTO_GOOGLE_APIS) \
-		-I$(PROTO_SELF) \
-		$(PROTO_SELF)/*.proto
+		-I$(PROTO_ROOT) \
+		$(PROTO_ROOT)/$(PACKAGE_DIR)/*.proto
 endif
 
 test: clean protoc

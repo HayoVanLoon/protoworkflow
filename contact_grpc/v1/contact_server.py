@@ -2,8 +2,8 @@ import grpc
 import time
 from concurrent import futures
 
-import contact_pb2
-import contact_pb2_grpc
+from bobsknobshop.contact.v1 import contact_pb2
+from bobsknobshop.contact.v1 import contact_pb2_grpc
 
 
 PORT = 50051

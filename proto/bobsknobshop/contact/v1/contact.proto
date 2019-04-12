@@ -1,33 +1,35 @@
 syntax = "proto3";
 
-package hayovanloon.protoworkflow.contact.v1;
+package bobsknobshop.contact.v1;
 
 import "google/api/annotations.proto";
+import "bobsknobshop/contact/v1/objects.proto";
 
 option java_multiple_files = true;
-option java_package = "nl.hayovanloon.protoworkflow.contact";
+option java_package = "gl.bobsknobshop.contact";
 
 
+// A user-facing service for requests related to contacting the company.
 service Contact {
 
+    // Stores a new message.
     rpc PostMessage(PostMessageRequest) returns (PostMessageResponse) {
-        option (google.api.http) = {
-            post: "/contact/messages"
-            body: "*"
-        };
     }
 }
+
 
 message PostMessageRequest {
+
+    // The message text.
     string message = 1;
+
+    // The person sending the message.
     Sender sender = 2;
 
-    message Sender {
-        string email = 1;
-        string name = 2;
-        string title = 3;
-    }
+    // The product id (optional).
+    string product_id = 3;
 }
+
 
 message PostMessageResponse {
     PostMessageRequest request = 1;

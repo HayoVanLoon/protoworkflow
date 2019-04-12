@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package bobsknobshop.messaging.v1;
+
+import "google/api/annotations.proto";
+
+import "bobsknobshop/contact/v1/objects.proto";
+import "bobsknobshop/sentiment/v1/objects.proto";
+
+option java_multiple_files = true;
+option java_package = "gl.bobsknobshop.messaging";
+
+
+// A message sent by a customer or prospect.
+message CustomerMessage {
+
+    // The message text.
+    string body = 1;
+
+    // The customer.
+    contact.v1.Sender sender = 2;
+
+    // The sentiment valence as determined by the sentiment service.
+    sentiment.v1.Valence valence = 3;
+
+    // Message category implying course of action.
+    MessageCategory category = 4;
+
+    // Message handling status.
+    Status status = 5;
+
+    enum Status {
+        TODO = 0;
+        IN_PROCESS = 1;
+        ON_HOLD = 2;
+        ANSWERED = 3;
+        DISCARDED = 99;
+    }
+}
+
+
+// An enumeration of message categories.
+enum MessageCategory {
+
+    // Not yet analysed.
+    NONE = 0;
+
+    // A question that should be answered.
+    QUESTION = 1;
+
+    // A complaint that should be addressed.
+    COMPLAINT = 2;
+
+    // Feedback, positive or negative, with no need for (immediate) replies.
+    // Use cases include (process) improvement analysis or website
+    // endorsement content.
+    FEEDBACK = 3;
+
+    // Messages defying the current classification scheme.
+    OTHER = 4;
+
+    // Junk
+    GARBAGE = 99;
+}

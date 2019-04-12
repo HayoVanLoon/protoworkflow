@@ -19,7 +19,7 @@ package main
 
 import (
 	"cloud.google.com/go/language/apiv1"
-	pb "github.com/HayoVanLoon/go-generated/sentiment/v1"
+	pb "github.com/HayoVanLoon/go-generated/bobsknobshop/sentiment/v1"
 	"golang.org/x/net/context"
 	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
 	"google.golang.org/grpc"
@@ -35,8 +35,8 @@ const (
 type server struct {
 }
 
-func (s *server) GetMessageSentiment(ctx context.Context, r *pb.GetMessageSentimentRequest) (*pb.GetMessageSentimentResponse, error) {
-	resp := &pb.GetMessageSentimentResponse{Request: r}
+func (s *server) GetSentiment(ctx context.Context, r *pb.GetSentimentRequest) (*pb.GetSentimentResponse, error) {
+	resp := &pb.GetSentimentResponse{Request: r}
 
 	client, err := language.NewClient(ctx)
 	if err != nil {
@@ -45,7 +45,7 @@ func (s *server) GetMessageSentiment(ctx context.Context, r *pb.GetMessageSentim
 
 	sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
 		Document: &languagepb.Document{
-			Source: &languagepb.Document_Content{Content: r.Message},
+			Source: &languagepb.Document_Content{Content: r.Text},
 			Type:   languagepb.Document_PLAIN_TEXT,
 		},
 		EncodingType: languagepb.EncodingType_UTF8,
@@ -56,7 +56,7 @@ func (s *server) GetMessageSentiment(ctx context.Context, r *pb.GetMessageSentim
 
 	log.Println(sentiment)
 
-	resp.Score = sentiment.DocumentSentiment.Score
+	resp.Valence = &pb.Valence{Score: sentiment.DocumentSentiment.Score,}
 
 	return resp, nil
 }

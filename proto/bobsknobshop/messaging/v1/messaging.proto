@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package bobsknobshop.messaging.v1;
+
+import "google/api/annotations.proto";
+
+import "bobsknobshop/messaging/v1/objects.proto";
+
+option java_multiple_files = true;
+option java_package = "gl.bobsknobshop.messaging";
+
+
+// A service acting as a hub for messaging workflows.
+service Messaging {
+
+    // Stores a new message.
+    rpc PostMessage(PostMessageRequest) returns (PostMessageResponse) {
+    }
+
+    // Retrieves an open, unhandled complaint.
+    rpc GetComplaint(GetComplaintRequest) returns (GetComplaintResponse) {
+    }
+
+    // Moves a message to a different category
+    rpc MoveMessage(MoveMessageRequest) returns (MoveMessageResponse) {
+    }
+}
+
+
+message PostMessageRequest {
+
+    oneof message {
+        // A message sent by a customer.
+        CustomerMessage customer_message = 1;
+    }
+}
+
+
+message PostMessageResponse {
+    PostMessageRequest request = 1;
+}
+
+
+message GetComplaintRequest {
+}
+
+
+message GetComplaintResponse {
+    GetComplaintRequest message = 1;
+}
+
+
+message MoveMessageRequest {
+    // The message to move.
+    string message_id = 1;
+
+    // Move message out of this classification bucket.
+    // If the message does not have this classification, this request will fail.
+    MessageCategory old_category = 2;
+
+    // Move message to this classification bucket.
+    MessageCategory new_category = 3;
+}
+
+
+message MoveMessageResponse {
+    MoveMessageRequest request = 1;
+}

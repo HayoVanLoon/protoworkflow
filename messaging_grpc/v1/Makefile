@@ -1,6 +1,6 @@
 
 PROJECT_NAME := protoworkflow
-MODULE_NAME := sentiment
+MODULE_NAME := messaging
 
 # Protocol Buffer Variables
 ORGANISATION := $(PROJECT_ORGANISATION)
@@ -17,16 +17,18 @@ IMAGE_NAME := $(PROJECT_NAME)_$(MODULE_NAME)_grpc
 TAG := latest
 
 TEST_ROOT := test
-MOCK_TARGET := $(TEST_ROOT)/$(MODULE_NAME)/v1/$(MODULE_NAME)_mock.go
+MOCK_TARGET := $(TEST_ROOT)/$(PACKAGE_DIR)/v1/$(MODULE_NAME)_mock.go
 
 
 .PHONY:
+
+clean: clean-protoc
 
 clean-protoc:
 	rm -rf $(GO_GENERATED)/*
 
 protoc: clean-protoc
-	mkdir -p "$(GO_OUT)"
+	mkdir -p "$(GO_GENERATED)"
 	$(PROTOC_EXEC) \
 		--go_out="plugins=grpc:$(GO_OUT)" \
 		-I$(PROTO_GOOGLE_APIS) \
