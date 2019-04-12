@@ -17,12 +17,24 @@ service Messaging {
     rpc PostMessage(PostMessageRequest) returns (PostMessageResponse) {
     }
 
+    // Retrieves an open, unhandled question.
+    rpc GetQuestion(GetQuestionRequest) returns (GetQuestionResponse) {
+    }
+
     // Retrieves an open, unhandled complaint.
     rpc GetComplaint(GetComplaintRequest) returns (GetComplaintResponse) {
     }
 
+    // Retrieves an open, unhandled feedback message.
+    rpc GetFeedback(GetFeedbackRequest) returns (GetFeedbackResponse) {
+    }
+
     // Moves a message to a different category
     rpc MoveMessage(MoveMessageRequest) returns (MoveMessageResponse) {
+    }
+
+    // Updates a message status
+    rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse) {
     }
 }
 
@@ -41,6 +53,15 @@ message PostMessageResponse {
 }
 
 
+message GetQuestionRequest {
+}
+
+
+message GetQuestionResponse {
+    GetQuestionRequest request = 1;
+}
+
+
 message GetComplaintRequest {
 }
 
@@ -50,19 +71,47 @@ message GetComplaintResponse {
 }
 
 
+message GetFeedbackRequest {
+}
+
+
+message GetFeedbackResponse {
+    GetFeedbackRequest message = 1;
+}
+
+
 message MoveMessageRequest {
+
     // The message to move.
     string message_id = 1;
 
-    // Move message out of this classification bucket.
-    // If the message does not have this classification, this request will fail.
+    // Move message out of this category bucket.
+    // If the message does not have this category, this request will fail.
     MessageCategory old_category = 2;
 
-    // Move message to this classification bucket.
+    // Move message to this category bucket.
     MessageCategory new_category = 3;
 }
 
 
 message MoveMessageResponse {
     MoveMessageRequest request = 1;
+}
+
+
+message UpdateStatusRequest {
+
+    // The message to update the status for.
+    string message = 1;
+
+    // If the message does not have this status, this request will fail.
+    CustomerMessage.Status old_status = 2;
+
+    // The new status.
+    CustomerMessage.Status new_status = 3;
+}
+
+
+message UpdateStatusResponse {
+    UpdateStatusRequest request = 1;
 }
