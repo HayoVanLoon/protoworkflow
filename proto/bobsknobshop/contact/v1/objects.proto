@@ -2,10 +2,9 @@ syntax = "proto3";
 
 package bobsknobshop.contact.v1;
 
-import "google/api/annotations.proto";
-
 option java_multiple_files = true;
-option java_package = "gl.bobsknobshop.contact";
+option java_package = "gl.bobsknobshop.contact.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/contact/v1;contact";
 
 
 // Details about a person that has sent a message.

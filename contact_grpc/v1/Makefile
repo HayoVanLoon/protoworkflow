@@ -14,9 +14,7 @@ PACKAGE_DIR := $(ORGANISATION)/$(MODULE)/$(PROTO_VERSION)
 PROTO_ROOT := ../../proto
 # Protocol Buffer Variables (Python)
 PYTHON_OUT := .
-# Protocol Buffer Variables (Go)
-GO_OUT := $(HOME)/go/src/github.com/HayoVanLoon/go-generated
-GO_GENERATED := $(GO_OUT)/$(PACKAGE_DIR)
+
 
 
 venv:
@@ -33,21 +31,21 @@ clean: clean-protoc
 
 clean-protoc:
 	rm -rf $(PYTHON_OUT)/*_pb2*.py
-	rm -rf $(GO_GENERATED)
 
 protoc: venv clean-protoc
 ifndef PROTO_GOOGLE_APIS
 	$(error PROTO_GOOGLE_APIS is not set, aborting)
 else
-	mkdir -p $(GO_OUT)
 	$(VENV); python -m grpc_tools.protoc \
 		--python_out=$(PYTHON_OUT) \
 		--grpc_python_out=$(PYTHON_OUT) \
-		--go_out="plugins=grpc:$(GO_OUT)" \
 		-I$(PROTO_GOOGLE_APIS) \
 		-I$(PROTO_ROOT) \
 		$(PROTO_ROOT)/$(PACKAGE_DIR)/*.proto
 endif
+
+build:
+	@echo Not implemented
 
 test: clean protoc
 	$(VENV); pytest

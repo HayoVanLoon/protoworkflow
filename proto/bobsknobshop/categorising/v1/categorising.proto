@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package bobsknobshop.categorising.v1;
+
+import "google/api/annotations.proto";
+
+import "bobsknobshop/messaging/v1/objects.proto";
+
+option java_multiple_files = true;
+option java_package = "gl.bobsknobshop.categorising.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/categorising/v1;categorising";
+
+
+// A service for determining sentiment in texts.
+service Categorising {
+
+    // Determines sentiment for the given text.
+    rpc GetCategory (GetCategoryRequest) returns (GetCategoryResponse) {
+    }
+}
+
+
+message GetCategoryRequest {
+    string text = 1;
+}
+
+
+message GetCategoryResponse {
+    messaging.v1.MessageCategory category = 2;
+}

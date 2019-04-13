@@ -1,6 +1,10 @@
 
 PROJECT_NAME := protoworkflow
-MODULE_NAME := messaging
+MODULE_NAME := categorising
+
+# Docker-related
+IMAGE_NAME := $(PROJECT_NAME)_$(MODULE_NAME)_grpc
+TAG := latest
 
 # Protocol Buffer Variables
 ORGANISATION := $(PROJECT_ORGANISATION)
@@ -11,15 +15,14 @@ PACKAGE_DIR := $(ORGANISATION)/$(MODULE)/$(PROTO_VERSION)
 TEST_ROOT := test
 MOCK_TARGET := $(TEST_ROOT)/$(PACKAGE_DIR)/$(MODULE_NAME)_mock.go
 
-# Docker-related
-IMAGE_NAME := $(PROJECT_NAME)_$(MODULE_NAME)_grpc
-TAG := latest
-
 
 .PHONY:
 
 build:
 	$(DOCKER) build -t $(IMAGE_NAME) .
+
+run:
+	go run categorising.go
 
 docker-run:
 	$(DOCKER) run -p 8080:8080 $(IMAGE_NAME)

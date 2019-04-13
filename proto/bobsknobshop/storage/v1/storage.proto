@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package bobsknobshop.storage.v1;
+
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+
+option java_multiple_files = true;
+option java_package = "gl.bobsknobshop.storage.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1";
+
+
+// A service acting as a (proxy for) data storage.
+service Storage {
+
+    // Stores or updates data by a given key.
+    rpc PostObject(PostObjectRequest) returns (PostObjectResponse) {
+    }
+
+    // Retrieves one or more data by key(s).
+    // Keys may contain wildcard values.
+    rpc GetObject(GetObjectRequest) returns (GetObjectResponse) {
+    }
+
+    // Deletes data.
+    rpc DeleteObject(DeleteObjectRequest) returns (google.protobuf.Empty) {
+    }
+}
+
+
+message PostObjectRequest {
+
+    // Key to store data by.
+    Key key = 1;
+
+    // Data to store.
+    bytes data = 2;
+}
+
+
+message PostObjectResponse {
+}
+
+
+message GetObjectRequest {
+
+    // Keys of data to retrieve.
+    // Keys may contain wildcards.
+    repeated Key key = 1;
+}
+
+
+message GetObjectResponse {
+
+    // Keys of found objects.
+    // May be smaller than keys in request.
+    // Indexes match data list elements
+    repeated Key keys = 1;
+
+    // Data matching keys.
+    // Indexes match keys list elements
+    repeated bytes data = 2;
+}
+
+
+message DeleteObjectRequest {
+
+    // Keys of data to delete.
+    repeated Key key = 1;
+}
+
+
+message Key {
+
+    // A key consists of a list of key-values.
+    repeated Part parts = 1;
+
+    message Part {
+
+        // Key names starting with underscores are reserved.
+        string key = 1;
+
+        // The wildcard character '*' is reserved and may not be used as a
+        // storage key value.
+        // Can be set to the wildcard character '*' in queries.
+        string value = 2;
+    }
+}

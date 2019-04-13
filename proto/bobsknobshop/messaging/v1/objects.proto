@@ -2,13 +2,11 @@ syntax = "proto3";
 
 package bobsknobshop.messaging.v1;
 
-import "google/api/annotations.proto";
-
 import "bobsknobshop/contact/v1/objects.proto";
-import "bobsknobshop/sentiment/v1/objects.proto";
 
 option java_multiple_files = true;
-option java_package = "gl.bobsknobshop.messaging";
+option java_package = "gl.bobsknobshop.messaging.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/messaging/v1;messaging";
 
 
 // A message sent by a customer or prospect.
@@ -20,22 +18,11 @@ message CustomerMessage {
     // The customer.
     contact.v1.Sender sender = 2;
 
-    // The sentiment valence as determined by the sentiment service.
-    sentiment.v1.Valence valence = 3;
-
     // Message category implying course of action.
-    MessageCategory category = 4;
+    MessageCategory category = 3;
 
     // Message handling status.
-    Status status = 5;
-
-    enum Status {
-        TODO = 0;
-        IN_PROCESS = 1;
-        ON_HOLD = 2;
-        ANSWERED = 3;
-        DISCARDED = 99;
-    }
+    Status status = 4;
 }
 
 
@@ -61,4 +48,24 @@ enum MessageCategory {
 
     // Junk
     GARBAGE = 99;
+}
+
+
+// A message status enum.
+enum Status {
+
+    // No processing initiated or aborted without results.
+    TO_DO = 0;
+
+    // Message is being processed.
+    IN_PROCESS = 1;
+
+    // Message processing has been put on hold.
+    ON_HOLD = 2;
+
+    // Message processing has been completed.
+    DONE = 3;
+
+    // Message has been discarded.
+    DISCARDED = 99;
 }

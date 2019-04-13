@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package bobsknobshop.common;
+
+import "google/protobuf/any.proto";
+
+option java_multiple_files = true;
+option java_package = "gl.bobsknobshop.common";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/common";
+
+
+message ServiceCallLog {
+
+    // Name of the service
+    string service = 1;
+
+    // The request.
+    google.protobuf.Any request = 2;
+
+    // The response.
+    google.protobuf.Any response = 3;
+}

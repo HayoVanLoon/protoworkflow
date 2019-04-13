@@ -6,7 +6,8 @@ import "google/api/annotations.proto";
 import "bobsknobshop/contact/v1/objects.proto";
 
 option java_multiple_files = true;
-option java_package = "gl.bobsknobshop.contact";
+option java_package = "gl.bobsknobshop.contact.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/contact/v1;contact";
 
 
 // A user-facing service for requests related to contacting the company.
@@ -32,5 +33,4 @@ message PostMessageRequest {
 
 
 message PostMessageResponse {
-    PostMessageRequest request = 1;
 }

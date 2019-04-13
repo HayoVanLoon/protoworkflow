@@ -18,10 +18,9 @@
 package main
 
 import (
-	"cloud.google.com/go/language/apiv1"
-	pb "github.com/HayoVanLoon/go-generated/bobsknobshop/sentiment/v1"
+	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
+	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
-	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"
@@ -29,36 +28,22 @@ import (
 )
 
 const (
-	port = "8080"
+	port              = "8080"
 )
 
 type server struct {
 }
 
-func (s *server) GetSentiment(ctx context.Context, r *pb.GetSentimentRequest) (*pb.GetSentimentResponse, error) {
-	resp := &pb.GetSentimentResponse{Request: r}
+func (*server) PostObject(context.Context, *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
+	panic("implement me")
+}
 
-	client, err := language.NewClient(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
+func (*server) GetObject(context.Context, *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {
+	panic("implement me")
+}
 
-	sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
-		Document: &languagepb.Document{
-			Source: &languagepb.Document_Content{Content: r.Text},
-			Type:   languagepb.Document_PLAIN_TEXT,
-		},
-		EncodingType: languagepb.EncodingType_UTF8,
-	})
-	if err != nil {
-		log.Fatalf("Failed to analyze text: %v", err)
-	}
-
-	log.Println(sentiment)
-
-	resp.Valence = &pb.Valence{Score: sentiment.DocumentSentiment.Score,}
-
-	return resp, nil
+func (*server) DeleteObject(context.Context, *pb.DeleteObjectRequest) (*empty.Empty, error) {
+	panic("implement me")
 }
 
 func main() {
@@ -68,7 +53,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterSentimentServer(s, &server{})
+	pb.RegisterStorageServer(s, &server{})
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s)

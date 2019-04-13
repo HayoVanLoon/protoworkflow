@@ -20,7 +20,7 @@ package main
 import (
 	"context"
 	"fmt"
-	pb "github.com/HayoVanLoon/go-generated/bobsknobshop/sentiment/v1"
+	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/categorising/v1"
 	"google.golang.org/grpc"
 	"log"
 	"time"
@@ -40,7 +40,7 @@ func getConn() (*grpc.ClientConn, error) {
 }
 
 func getMessageSentiment(m string) error {
-	r := &pb.GetSentimentRequest{Text: m}
+	r := &pb.GetCategoryRequest{Text: m}
 
 	conn, err := getConn()
 	defer func() {
@@ -49,12 +49,12 @@ func getMessageSentiment(m string) error {
 		}
 	}()
 
-	c := pb.NewSentimentClient(conn)
+	c := pb.NewCategorisingClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := c.GetSentiment(ctx, r)
+	resp, err := c.GetCategory(ctx, r)
 
 	log.Printf("%v\n", resp)
 
@@ -65,4 +65,5 @@ func main() {
 	fmt.Println(getMessageSentiment("This does not please me."))
 	fmt.Println(getMessageSentiment("Everything is awesome."))
 	fmt.Println(getMessageSentiment("Ça je n'aime pas."))
+	fmt.Println(getMessageSentiment("I have a question about this product. Can I eat it?"))
 }
