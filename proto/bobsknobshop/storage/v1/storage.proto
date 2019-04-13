@@ -66,6 +66,7 @@ message GetObjectResponse {
 message DeleteObjectRequest {
 
     // Keys of data to delete.
+    // Uses exact keys.
     repeated Key keys = 1;
 }
 
