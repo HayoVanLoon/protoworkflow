@@ -18,6 +18,9 @@ TAG := latest
 
 .PHONY:
 
+protoc:
+	@echo Go App, skipped
+
 build:
 	$(DOCKER) build -t $(IMAGE_NAME) .
 

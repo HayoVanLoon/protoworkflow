@@ -18,6 +18,9 @@ MOCK_TARGET := $(TEST_ROOT)/$(PACKAGE_DIR)/$(MODULE_NAME)_mock.go
 
 .PHONY:
 
+protoc:
+	@echo Go App, skipped
+
 build:
 	$(DOCKER) build -t $(IMAGE_NAME) .
 
