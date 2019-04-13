@@ -46,7 +46,7 @@ message GetObjectRequest {
 
     // Keys of data to retrieve.
     // Keys may contain wildcards.
-    repeated Key key = 1;
+    repeated Key keys = 1;
 }
 
 
@@ -66,7 +66,7 @@ message GetObjectResponse {
 message DeleteObjectRequest {
 
     // Keys of data to delete.
-    repeated Key key = 1;
+    repeated Key keys = 1;
 }
 
 
@@ -77,12 +77,13 @@ message Key {
 
     message Part {
 
-        // Key names starting with underscores are reserved.
+        // Must not contain '=' or '~'
         string key = 1;
 
-        // The wildcard character '*' is reserved and may not be used as a
-        // storage key value.
+        // The wildcard character '*' is reserved and may not be used when
+        // storing values.
         // Can be set to the wildcard character '*' in queries.
+        // Must not contain '=' or '~'
         string value = 2;
     }
 }

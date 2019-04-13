@@ -39,7 +39,7 @@ func getConn() (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func getMessageSentiment(m string) error {
+func getCategory(m string) error {
 	r := &pb.GetCategoryRequest{Text: m}
 
 	conn, err := getConn()
@@ -62,8 +62,8 @@ func getMessageSentiment(m string) error {
 }
 
 func main() {
-	fmt.Println(getMessageSentiment("This does not please me."))
-	fmt.Println(getMessageSentiment("Everything is awesome."))
-	fmt.Println(getMessageSentiment("Ça je n'aime pas."))
-	fmt.Println(getMessageSentiment("I have a question about this product. Can I eat it?"))
+	fmt.Println(getCategory("This does not please me."))
+	fmt.Println(getCategory("Everything is awesome."))
+	fmt.Println(getCategory("Ça je n'aime pas."))
+	fmt.Println(getCategory("I have a question about this product. Can I eat it?"))
 }

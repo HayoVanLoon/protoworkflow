@@ -25,25 +25,78 @@ import (
 	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
+	"strings"
 )
 
 const (
 	port              = "8080"
+	wildcard = "*"
+	sep = "~"
+	kvSep = "="
 )
 
+func toLocal(k *pb.Key) string {
+	var ss []string
+	for _, p := range k.Parts {
+		ss = append(ss, p.Key + kvSep + p.Value)
+	}
+	return strings.Join(ss, sep)
+}
+
+func toPb(s string) pb.Key {
+	ss := strings.Split(s, sep)
+	var ps []*pb.Key_Part
+	for _, kv := range ss {
+		ks := strings.Split(kv, kvSep)
+		ps = append(ps, &pb.Key_Part{Key: ks[0], Value: ks[1]})
+	}
+	return pb.Key{Parts: ps}
+}
+
 type server struct {
+	ds map[string][]byte
 }
 
-func (*server) PostObject(context.Context, *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
-	panic("implement me")
+func (s *server) PostObject(_ context.Context, req *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
+	s.ds[toLocal(req.Key)] = req.Data
+	return &pb.PostObjectResponse{}, nil
 }
 
-func (*server) GetObject(context.Context, *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {
-	panic("implement me")
+func (s *server) GetObject(_ context.Context, req *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {
+	var ks []*pb.Key
+	var ds [][]byte
+	for _, sk := range req.Keys {
+		if d, ok := s.ds[toLocal(sk)]; ok {
+			ks = append(ks, sk)
+			ds = append(ds, d)
+		} else {
+			for ss, d := range s.ds {
+				kvs := toPb(ss)
+				ok = len(sk.Parts) == len(kvs.Parts)
+				for i := 0; ok && i < len(kvs.Parts); i += 1 {
+					left, right := sk.Parts[i], kvs.Parts[i]
+					ok = ok && left.Key == right.Key && left.Value == right.Value || left.Value == wildcard
+				}
+				if ok {
+					ks = append(ks, sk)
+					ds = append(ds, d)
+				}
+			}
+		}
+	}
+	return &pb.GetObjectResponse{Keys: ks, Data: ds}, nil
 }
 
-func (*server) DeleteObject(context.Context, *pb.DeleteObjectRequest) (*empty.Empty, error) {
-	panic("implement me")
+func (s *server) DeleteObject(_ context.Context, req *pb.DeleteObjectRequest) (*empty.Empty, error) {
+	for _, k := range req.Keys {
+		kvs := toLocal(k)
+		if _, f := s.ds[kvs]; f {
+			delete(s.ds, kvs)
+		} else {
+			// TODO: return not-found error
+		}
+	}
+	return &empty.Empty{}, nil
 }
 
 func main() {
@@ -53,7 +106,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterStorageServer(s, &server{})
+	pb.RegisterStorageServer(s, &server{make(map[string][]byte)})
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
