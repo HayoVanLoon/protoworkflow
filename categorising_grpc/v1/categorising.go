@@ -19,6 +19,7 @@ package main
 
 import (
 	"cloud.google.com/go/language/apiv1"
+	"flag"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/categorising/v1"
 	messagepb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/messaging/v1"
 	"golang.org/x/net/context"
@@ -30,7 +31,7 @@ import (
 )
 
 const (
-	port              = "8080"
+	defaultPort       = "8080"
 	questionThreshold = 0
 	feedbackThreshold = .6
 )
@@ -39,11 +40,10 @@ type server struct {
 }
 
 func (s *server) GetCategory(ctx context.Context, r *pb.GetCategoryRequest) (*pb.GetCategoryResponse, error) {
-	resp := &pb.GetCategoryResponse{}
-
 	client, err := language.NewClient(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		log.Printf("error: failed to create nlp client: %v", err)
+		return nil, err
 	}
 
 	sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
@@ -54,14 +54,17 @@ func (s *server) GetCategory(ctx context.Context, r *pb.GetCategoryRequest) (*pb
 		EncodingType: languagepb.EncodingType_UTF8,
 	})
 	if err != nil {
-		log.Fatalf("Failed to analyze text: %v", err)
+		log.Printf("warning: failed to analyze text: %v", err)
+		return nil, err
 	}
+	score := sentiment.DocumentSentiment.Score
 
-	log.Println(sentiment)
+	log.Printf("info: message was scored with %v", score)
 
-	if sentiment.DocumentSentiment.Score < questionThreshold {
+	resp := &pb.GetCategoryResponse{}
+	if score < questionThreshold {
 		resp.Category = messagepb.MessageCategory_COMPLAINT
-	} else if sentiment.DocumentSentiment.Score < feedbackThreshold {
+	} else if score < feedbackThreshold {
 		resp.Category = messagepb.MessageCategory_QUESTION
 	} else {
 		resp.Category = messagepb.MessageCategory_FEEDBACK
@@ -71,7 +74,10 @@ func (s *server) GetCategory(ctx context.Context, r *pb.GetCategoryRequest) (*pb
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":"+port)
+	var port = flag.String("port", defaultPort, "port to listen on")
+	flag.Parse()
+
+	lis, err := net.Listen("tcp", ":"+*port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

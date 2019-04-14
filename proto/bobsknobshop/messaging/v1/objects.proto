@@ -15,14 +15,17 @@ message CustomerMessage {
     // The message text.
     string body = 1;
 
+    // Timestamp when message was first received.
+    int64 timestamp = 2;
+
     // The customer.
-    contact.v1.Sender sender = 2;
+    contact.v1.Sender sender = 3;
 
     // Message category implying course of action.
-    MessageCategory category = 3;
+    MessageCategory category = 4;
 
     // Message handling status.
-    Status status = 4;
+    Status status = 5;
 }
 
 

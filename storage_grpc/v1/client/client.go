@@ -31,6 +31,7 @@ const (
 	port = 8080
 )
 
+// Establishes a connection to the service
 func getConn() (*grpc.ClientConn, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("%v:%v", host, port), grpc.WithInsecure())
 	if err != nil {
@@ -105,14 +106,51 @@ func deleteObject(key *pb.Key) error {
 	return err
 }
 
-func main() {
+// Fires a few requests to the service
+func examples() {
 	key := &pb.Key{Parts:[]*pb.Key_Part{{Key: "foo", Value:"1"}, {Key: "bar", Value:"2"}}}
 	key2 := &pb.Key{Parts:[]*pb.Key_Part{{Key: "foo", Value:"3"}, {Key: "bar", Value:"4"}}}
-	key3 := &pb.Key{Parts:[]*pb.Key_Part{{Key: "foo", Value:"*"}, {Key: "bar", Value:"*"}}}
+	query := &pb.Key{Parts: []*pb.Key_Part{{Key: "foo", Value:"*"}, {Key: "bar", Value:"*"}}}
+
+	key3 := &pb.Key{Parts:[]*pb.Key_Part{
+		{Key: "timestamp", Value: "0"},
+		{Key: "id", Value: "test1234"},
+		{Key: "category", Value: "QUESTION"},
+		{Key: "status", Value: "TO_DO"},
+	}}
+	query2 := &pb.Key{Parts:[]*pb.Key_Part{
+		{Key: "timestamp", Value: "*"},
+		{Key: "id", Value:"*"},
+		{Key: "category", Value:"*"},
+		{Key: "status", Value: "*"},
+	}}
+
+	_ = getObject(query2)
+
 	_ = postObject(key, "bla")
 	_ = postObject(key2, "blue")
+	_ = postObject(key3, "I have lots of questions. What's the meaning of life?")
+
 	_ = getObject(key)
-	_ = getObject(key3)
+	_ = getObject(query)
+
 	_ = deleteObject(key)
+
 	_ = getObject(key2)
+	_ = getObject(query2)
+
+	// clean up
+	_ = deleteObject(key2)
+	_ = deleteObject(key3)
+}
+
+func main() {
+	query := &pb.Key{Parts:[]*pb.Key_Part{
+		{Key: "timestamp", Value: "*"},
+		{Key: "id", Value:"*"},
+		{Key: "category", Value:"*"},
+		{Key: "status", Value: "*"},
+	}}
+
+	_ = getObject(query)
 }
