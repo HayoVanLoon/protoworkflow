@@ -73,7 +73,7 @@ func toPb(k dkey) *pb.Key {
 }
 
 type item struct {
-	idxs map[string]string
+	idx  map[string]string
 	data []byte
 }
 
@@ -142,18 +142,18 @@ func (s *server) putData(key dkey, idx map[string]string, d []byte) bool {
 		return false
 	}
 
-	it := item{idxs: idx, data: d}
+	it := item{idx: idx, data: d}
 	s.data.items[key] = it
 
-	updateIndexes(s.data.idxs, it, key)
+	s.updateIndexes(it.idx, key)
 
 	return true
 }
 
 // MUST be under mutex!
-func updateIndexes(idxs map[string]map[string][]dkey, it item, key dkey) {
-	for k, v := range it.idxs {
-		if vs, ok := idxs[k]; ok {
+func (s *server) updateIndexes(idx map[string]string, key dkey) {
+	for k, v := range idx {
+		if vs, ok := s.data.idxs[k]; ok {
 			if ks, ok := vs[v]; ok {
 				// insert dkey into a sorted array
 				for i, k2 := range ks {
@@ -169,24 +169,30 @@ func updateIndexes(idxs map[string]map[string][]dkey, it item, key dkey) {
 			}
 			vs[wildcard] = append(vs[wildcard], key)
 		} else {
-			idxs[k] = map[string][]dkey{v: {key}}
+			s.data.idxs[k] = map[string][]dkey{v: {key}}
 		}
 	}
 }
 
+func removeItem(ks []dkey, key dkey) []dkey {
+	for i, k2 := range ks {
+		if k2 == key {
+			return append(ks[:i], ks[i+1:]...)
+		}
+	}
+	return ks
+}
+
 // MUST be under mutex!
-func deleteFromIdx(idxs map[string]map[string][]dkey, it item, key dkey) {
-	for k, v := range it.idxs {
-		if vs, ok := idxs[k]; ok {
+func (s *server) deleteFromIdx(idx map[string]string, key dkey) {
+	for k, v := range idx {
+		if vs, ok := s.data.idxs[k]; ok {
 			if ks, ok := vs[v]; ok {
-				for i, k2 := range ks {
-					if k2 == key {
-						ks = append(ks[:i], ks[i+1:]...)
-						return
-					}
-				}
+				ks = removeItem(ks, key)
+				s.data.idxs[k][v] = ks
 			}
 		}
+		s.data.idxs[k][wildcard] = removeItem(s.data.idxs[k][wildcard], key)
 	}
 }
 
@@ -194,7 +200,7 @@ func (s *server) deleteData(key dkey) {
 	s.data.Lock()
 	defer s.data.Unlock()
 	if it, ok := s.data.items[key]; ok {
-		deleteFromIdx(s.data.idxs, it, key)
+		s.deleteFromIdx(it.idx, key)
 		delete(s.data.items, key)
 	}
 }
@@ -206,10 +212,10 @@ func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bo
 	key := toKey(oldKey)
 	if it, ok := s.data.items[key]; ok {
 		if bytes.Equal(it.data, oldData) {
-			newIt := item{idxs: it.idxs, data: newData}
+			newIt := item{idx: toIdx(newKey), data: newData}
 			s.data.items[key] = newIt
-			// TODO: remove old indices
-			// TODO: update indices
+			s.deleteFromIdx(toIdx(oldKey), key)
+			s.updateIndexes(toIdx(newKey), key)
 			return true, nil
 		} else {
 			return false, it.data

@@ -162,12 +162,13 @@ func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.Cu
 	return
 }
 
-func (s server) mutateMessage(old *pb.CustomerMessage, new *pb.CustomerMessage) error {
-	key := createKey(old)
+func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) error {
+	oldKey := createKey(oldM)
+	newKey := createKey(newM)
 
-	oldData, _ := proto.Marshal(old)
-	newData, _ := proto.Marshal(new)
-	r := &storagepb.MutateObjectRequest{Key: key, Old: oldData, New: newData}
+	oldData, _ := proto.Marshal(oldM)
+	newData, _ := proto.Marshal(newM)
+	r := &storagepb.MutateObjectRequest{OldKey: oldKey, NewKey: newKey, OldData: oldData, NewData: newData}
 
 	conn, err := s.getConn(storageService)
 	defer func() {
@@ -182,7 +183,7 @@ func (s server) mutateMessage(old *pb.CustomerMessage, new *pb.CustomerMessage) 
 	defer cancel()
 
 	_, err = c.MutateObject(ctx, r)
-	log.Printf("DEBUG: mutated message %v-%v-%v", old.Timestamp, old.Sender.Name, old.Body)
+	log.Printf("DEBUG: mutated message \"%s\"", oldM.Body)
 
 	return err
 }
@@ -218,9 +219,10 @@ func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp
 // Claims a message.
 func (s server) claimFirst(msgs []*pb.CustomerMessage) (m *pb.CustomerMessage, err error) {
 	for i := 0; m == nil && i < len(msgs); i += 1 {
+		oldM := *msgs[i]
 		m = msgs[i]
 		m.Status = pb.Status_IN_PROCESS
-		err = s.storeMessage(m)
+		err = s.mutateMessage(&oldM, m)
 		if err != nil {
 			m = nil
 		}
