@@ -23,6 +23,7 @@ import (
 	categorisingpb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/categorising/v1"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/messaging/v1"
 	storagepb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -57,13 +58,27 @@ func (s server) getConn(service string) (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
+// Creates a key for the message
+func createKey(m *pb.CustomerMessage) *storagepb.Key {
+	return &storagepb.Key{
+		Parts: []*storagepb.Key_Part{
+			{Key: "timestamp", Value: strconv.FormatInt(m.Timestamp, 10)},
+			{Key: "id", Value: m.Sender.Name},
+		},
+		IndexedValues: []*storagepb.Key_Part{
+			{Key: "category", Value: m.GetCategory().String()},
+			{Key: "status", Value: m.GetStatus().String()},
+		},
+	}
+}
+
 func (s server) getCategory(m *pb.CustomerMessage) (cat pb.MessageCategory, err error) {
 	r := &categorisingpb.GetCategoryRequest{Text: m.Body}
 
 	conn, err := s.getConn(categorisingService)
 	defer func() {
 		if err := conn.Close(); err != nil {
-			log.Panicf("error closing connection: %v", err)
+			log.Printf("WARN: error closing connection: %v", err)
 		}
 	}()
 
@@ -83,12 +98,13 @@ func (s server) getCategory(m *pb.CustomerMessage) (cat pb.MessageCategory, err 
 func (s server) storeMessage(m *pb.CustomerMessage) error {
 	key := createKey(m)
 
-	r := &storagepb.PostObjectRequest{Key: key, Data: []byte(m.Body)}
+	data, _ := proto.Marshal(m)
+	r := &storagepb.PostObjectRequest{Key: key, Data: data}
 
 	conn, err := s.getConn(storageService)
 	defer func() {
 		if err := conn.Close(); err != nil {
-			log.Printf("warning: error closing connection: %v", err)
+			log.Printf("WARN: error closing connection: %v", err)
 		}
 	}()
 
@@ -98,21 +114,77 @@ func (s server) storeMessage(m *pb.CustomerMessage) error {
 	defer cancel()
 
 	resp, err := c.PostObject(ctx, r)
-
-	log.Printf("%v\n", resp)
+	if err != nil {
+		log.Printf("WARN: storing message: %v", err)
+	} else if resp.Success {
+		log.Printf("DEBUG: stored message %v", m.Body)
+	} else {
+		log.Printf("WARN: message already stored %v", m.Body)
+	}
 
 	return err
 }
 
-func createKey(m *pb.CustomerMessage) *storagepb.Key {
-	return &storagepb.Key{
-		Parts: []*storagepb.Key_Part{
-			{Key: "timestamp", Value: strconv.FormatInt(m.Timestamp, 10)},
-			{Key: "id", Value: m.Sender.Name},
-			{Key: "category", Value: m.GetCategory().String()},
-			{Key: "status", Value: m.GetStatus().String()},
+func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.CustomerMessage, err error) {
+	query := &storagepb.Key{
+		IndexedValues: []*storagepb.Key_Part{
+			{Key: "category", Value: cat.String()},
+			{Key: "status", Value: st.String()},
 		},
 	}
+
+	r := &storagepb.GetObjectRequest{Keys: []*storagepb.Key{query}}
+
+	conn, err := s.getConn(storageService)
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("WARN: error closing connection: %v", err)
+		}
+	}()
+
+	c := storagepb.NewStorageClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := c.GetObject(ctx, r)
+	if err != nil {
+		log.Printf("WARN: error getting stored message: %v", err)
+		return
+	}
+
+	for i := 0; i < len(resp.Data); i += 1 {
+		m := &pb.CustomerMessage{}
+		_ = proto.Unmarshal(resp.Data[i], m)
+		msgs = append(msgs, m)
+	}
+
+	return
+}
+
+func (s server) mutateMessage(old *pb.CustomerMessage, new *pb.CustomerMessage) error {
+	key := createKey(old)
+
+	oldData, _ := proto.Marshal(old)
+	newData, _ := proto.Marshal(new)
+	r := &storagepb.MutateObjectRequest{Key: key, Old: oldData, New: newData}
+
+	conn, err := s.getConn(storageService)
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("WARN: error closing connection: %v", err)
+		}
+	}()
+
+	c := storagepb.NewStorageClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err = c.MutateObject(ctx, r)
+	log.Printf("DEBUG: mutated message %v-%v-%v", old.Timestamp, old.Sender.Name, old.Body)
+
+	return err
 }
 
 func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp *pb.PostMessageResponse, err error) {
@@ -126,7 +198,7 @@ func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp
 		cat, err = s.getCategory(m)
 	}
 	if err != nil {
-		log.Printf("warning: could not get category: %s", err)
+		log.Printf("WARN: could not get category: %s", err)
 		return
 	}
 	m.Category = cat
@@ -136,23 +208,66 @@ func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp
 		err = s.storeMessage(m)
 	}
 	if err != nil {
-		log.Printf("error: could not store message: %s", err)
+		log.Printf("ERROR: could not store message: %s", err)
 		return
 	}
 
 	return
 }
 
-func (server) GetQuestion(context.Context, *pb.GetQuestionRequest) (*pb.GetQuestionResponse, error) {
-	panic("implement me")
+// Claims a message.
+func (s server) claimFirst(msgs []*pb.CustomerMessage) (m *pb.CustomerMessage, err error) {
+	for i := 0; m == nil && i < len(msgs); i += 1 {
+		m = msgs[i]
+		m.Status = pb.Status_IN_PROCESS
+		err = s.storeMessage(m)
+		if err != nil {
+			m = nil
+		}
+	}
+	return
 }
 
-func (server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.GetComplaintResponse, error) {
-	panic("implement me")
+func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.GetQuestionResponse, err error) {
+	msgs, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO)
+	if err != nil {
+		log.Printf("WARN: error retrieving messages: %s", err)
+	}
+
+	m, err := s.claimFirst(msgs)
+	if err == nil {
+		resp = &pb.GetQuestionResponse{Message: &pb.GetQuestionResponse_CustomerMessage{m}}
+	}
+
+	return
 }
 
-func (server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (*pb.GetFeedbackResponse, error) {
-	panic("implement me")
+func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (resp *pb.GetComplaintResponse, err error) {
+	msgs, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO)
+	if err != nil {
+		log.Printf("WARN: error retrieving messages: %s", err)
+	}
+
+	m, err := s.claimFirst(msgs)
+	if m != nil {
+		resp = &pb.GetComplaintResponse{Message: &pb.GetComplaintResponse_CustomerMessage{m}}
+	}
+
+	return
+}
+
+func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.GetFeedbackResponse, err error) {
+	msgs, err := s.getMessages(pb.MessageCategory_FEEDBACK, pb.Status_TO_DO)
+	if err != nil {
+		log.Printf("WARN: error retrieving messages: %s", err)
+	}
+
+	m, err := s.claimFirst(msgs)
+	if m != nil {
+		resp = &pb.GetFeedbackResponse{Message: &pb.GetFeedbackResponse_CustomerMessage{m}}
+	}
+
+	return
 }
 
 func (server) MoveMessage(context.Context, *pb.MoveMessageRequest) (*pb.MoveMessageResponse, error) {

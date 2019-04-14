@@ -13,7 +13,8 @@ option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/
 // A service acting as a (proxy for) data storage.
 service Storage {
 
-    // Stores or updates data by a given key.
+    // Stores data by a given key.
+    // If data is already stored by the given key, nothing happens.
     rpc PostObject(PostObjectRequest) returns (PostObjectResponse) {
     }
 
@@ -24,6 +25,12 @@ service Storage {
 
     // Deletes data.
     rpc DeleteObject(DeleteObjectRequest) returns (google.protobuf.Empty) {
+    }
+
+    // Mutates an object, but only when its current state matches with the
+    // request state.
+    // If the state check fails, a current version of the object is returned.
+    rpc MutateObject(MutateObjectRequest) returns (MutateObjectResponse) {
     }
 }
 
@@ -39,6 +46,7 @@ message PostObjectRequest {
 
 
 message PostObjectResponse {
+    bool success = 1;
 }
 
 
@@ -71,10 +79,26 @@ message DeleteObjectRequest {
 }
 
 
+message MutateObjectRequest {
+    Key old_key = 1;
+    Key new_key = 2;
+    bytes old_data = 3;
+    bytes new_data = 4;
+}
+
+
+message MutateObjectResponse {
+    bool success = 1;
+    bytes current = 2;
+}
+
+
 message Key {
 
     // A key consists of a list of key-values.
     repeated Part parts = 1;
+
+    repeated Part indexed_values = 2;
 
     message Part {
 

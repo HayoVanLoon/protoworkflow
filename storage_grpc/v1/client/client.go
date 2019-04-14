@@ -57,7 +57,7 @@ func postObject(key *pb.Key, m string) error {
 
 	resp, err := c.PostObject(ctx, r)
 
-	log.Printf("%v\n", resp)
+	log.Printf("Post %v\n", resp)
 
 	return err
 }
@@ -79,7 +79,7 @@ func getObject(key *pb.Key) error {
 
 	resp, err := c.GetObject(ctx, r)
 
-	log.Printf("%v\n", resp)
+	log.Printf("Get %v\n", resp)
 
 	return err
 }
@@ -101,35 +101,48 @@ func deleteObject(key *pb.Key) error {
 
 	resp, err := c.DeleteObject(ctx, r)
 
-	log.Printf("%v\n", resp)
+	log.Printf("Delete: %v\n", resp)
 
 	return err
 }
 
 // Fires a few requests to the service
 func examples() {
-	key := &pb.Key{Parts:[]*pb.Key_Part{{Key: "foo", Value:"1"}, {Key: "bar", Value:"2"}}}
-	key2 := &pb.Key{Parts:[]*pb.Key_Part{{Key: "foo", Value:"3"}, {Key: "bar", Value:"4"}}}
-	query := &pb.Key{Parts: []*pb.Key_Part{{Key: "foo", Value:"*"}, {Key: "bar", Value:"*"}}}
+	key := &pb.Key{Parts: []*pb.Key_Part{{Key: "foo", Value: "1"}, {Key: "bar", Value: "2"}}}
+	key2 := &pb.Key{Parts: []*pb.Key_Part{{Key: "foo", Value: "3"}, {Key: "bar", Value: "4"}}}
+	query := &pb.Key{IndexedValues: []*pb.Key_Part{{Key: "foo", Value: "*"}, {Key: "bar", Value: "*"}}}
 
-	key3 := &pb.Key{Parts:[]*pb.Key_Part{
-		{Key: "timestamp", Value: "0"},
-		{Key: "id", Value: "test1234"},
-		{Key: "category", Value: "QUESTION"},
-		{Key: "status", Value: "TO_DO"},
-	}}
-	query2 := &pb.Key{Parts:[]*pb.Key_Part{
-		{Key: "timestamp", Value: "*"},
-		{Key: "id", Value:"*"},
-		{Key: "category", Value:"*"},
+	key3 := &pb.Key{
+		Parts: []*pb.Key_Part{
+			{Key: "timestamp", Value: "0"},
+			{Key: "id", Value: "test1234"},
+		},
+		IndexedValues: []*pb.Key_Part{
+			{Key: "category", Value: "QUESTION"},
+			{Key: "status", Value: "TO_DO"},
+		},
+	}
+	key4 := &pb.Key{
+		Parts: []*pb.Key_Part{
+			{Key: "timestamp", Value: "1"},
+			{Key: "id", Value: "test1234"},
+		},
+		IndexedValues: []*pb.Key_Part{
+			{Key: "category", Value: "QUESTION"},
+			{Key: "status", Value: "TO_DO"},
+		},
+	}
+	query2 := &pb.Key{IndexedValues: []*pb.Key_Part{
+		{Key: "category", Value: "*"},
 		{Key: "status", Value: "*"},
 	}}
 
-	_ = getObject(query2)
+	// _ = getObject(query2)
 
 	_ = postObject(key, "bla")
 	_ = postObject(key2, "blue")
 	_ = postObject(key3, "I have lots of questions. What's the meaning of life?")
+	_ = postObject(key4, "Bananas are yellow.")
 
 	_ = getObject(key)
 	_ = getObject(query)
@@ -142,13 +155,14 @@ func examples() {
 	// clean up
 	_ = deleteObject(key2)
 	_ = deleteObject(key3)
+	_ = getObject(query2)
+	_ = deleteObject(key4)
 }
 
 func main() {
-	query := &pb.Key{Parts:[]*pb.Key_Part{
-		{Key: "timestamp", Value: "*"},
-		{Key: "id", Value:"*"},
-		{Key: "category", Value:"*"},
+	examples()
+	query := &pb.Key{IndexedValues: []*pb.Key_Part{
+		{Key: "category", Value: "*"},
 		{Key: "status", Value: "*"},
 	}}
 

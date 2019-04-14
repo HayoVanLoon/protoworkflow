@@ -63,6 +63,28 @@ func postMessage(port string, m *pb.CustomerMessage) error {
 	return err
 }
 
+func getQuestion(port string) error {
+	r := &pb.GetQuestionRequest{}
+
+	conn, err := getConn(port)
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Panicf("error closing connection: %v", err)
+		}
+	}()
+
+	c := pb.NewMessagingClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := c.GetQuestion(ctx, r)
+
+	log.Printf("%v\n", resp)
+
+	return err
+}
+
 func main() {
 	var port = flag.String("port", defaultPort, "message service port")
 	flag.Parse()
@@ -78,4 +100,5 @@ func main() {
 
 	_ = postMessage(*port, question)
 	_ = postMessage(*port, complaint)
+	_ = getQuestion(*port)
 }

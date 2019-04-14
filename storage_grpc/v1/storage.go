@@ -18,6 +18,7 @@
 package main
 
 import (
+	"bytes"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
@@ -36,19 +37,32 @@ const (
 	kvSep    = "="
 )
 
-type key string
+// alias for readability
+type dkey string
 
-// Flattens a pb.Key so it can be used as a data map key
-func toKey(k *pb.Key) key {
+// Flattens a pb.Key so it can be used as a data map dkey
+func toKey(k *pb.Key) dkey {
 	var ss []string
 	for _, p := range k.Parts {
 		ss = append(ss, p.Key+kvSep+p.Value)
 	}
-	return key(strings.Join(ss, sep))
+	return dkey(strings.Join(ss, sep))
 }
 
-// Reconstructs a pb.Key from a data map key string
-func toPb(k key) *pb.Key {
+// Turns indexed values into an index map
+func toIdx(k *pb.Key) map[string]string {
+	result := make(map[string]string)
+	for _, p := range k.Parts {
+		result[p.Key] = p.Value
+	}
+	for _, p := range k.IndexedValues {
+		result[p.Key] = p.Value
+	}
+	return result
+}
+
+// Reconstructs a pb.Key from a data map dkey string
+func toPb(k dkey) *pb.Key {
 	ss := strings.Split(string(k), sep)
 	var ps []*pb.Key_Part
 	for _, kv := range ss {
@@ -58,9 +72,15 @@ func toPb(k key) *pb.Key {
 	return &pb.Key{Parts: ps}
 }
 
+type item struct {
+	idxs map[string]string
+	data []byte
+}
+
 type dataMap struct {
 	sync.RWMutex
-	ds map[key][]byte
+	idxs  map[string]map[string][]dkey
+	items map[dkey]item
 }
 
 type server struct {
@@ -68,63 +88,156 @@ type server struct {
 }
 
 func newServer() *server {
-	return &server{dataMap{ds: make(map[key][]byte)}}
+	dataMap := dataMap{idxs: make(map[string]map[string][]dkey), items: make(map[dkey]item)}
+	return &server{dataMap}
 }
 
-func (s *server) getData(key key) ([]byte, bool) {
+func (s *server) getData(key dkey) ([]byte, bool) {
 	s.data.RLock()
 	defer s.data.RUnlock()
-	d, k := s.data.ds[key]
-	return d, k
-}
-
-func (s *server) getKeys() []key {
-	s.data.RLock()
-	defer s.data.RUnlock()
-	ks := make([]key, 0, len(s.data.ds))
-	for k := range s.data.ds {
-		ks = append(ks, k)
+	if it, ok := s.data.items[key]; ok {
+		return it.data, ok
 	}
-	return ks
+	return nil, false
 }
 
-func (s *server) putData(key key, d []byte) {
-	s.data.Lock()
-	defer s.data.Unlock()
-	s.data.ds[key] = d
+func (s *server) getKeys(query map[string]string) []dkey {
+	s.data.RLock()
+	defer s.data.RUnlock()
+
+	var result []dkey
+	for k, v := range query {
+		if vs, ok := s.data.idxs[k]; ok {
+			if ks, ok := vs[v]; ok {
+				if result == nil {
+					result = ks
+				} else {
+					i, j := 0, 0
+					var newR []dkey
+					for ; i < len(ks) && j < len(result); {
+						if result[j] > ks[i] {
+							i += 1
+						} else if result[j] < ks[i] {
+							j += 1
+						} else {
+							newR = append(newR, result[j])
+							i += 1
+							j += 1
+						}
+					}
+					result = newR
+				}
+			}
+		}
+	}
+
+	return result
 }
 
-func (s *server) deleteData(key key) {
+func (s *server) putData(key dkey, idx map[string]string, d []byte) bool {
 	s.data.Lock()
 	defer s.data.Unlock()
-	delete(s.data.ds, key)
+
+	if _, ex := s.data.items[key]; ex {
+		return false
+	}
+
+	it := item{idxs: idx, data: d}
+	s.data.items[key] = it
+
+	updateIndexes(s.data.idxs, it, key)
+
+	return true
+}
+
+// MUST be under mutex!
+func updateIndexes(idxs map[string]map[string][]dkey, it item, key dkey) {
+	for k, v := range it.idxs {
+		if vs, ok := idxs[k]; ok {
+			if ks, ok := vs[v]; ok {
+				// insert dkey into a sorted array
+				for i, k2 := range ks {
+					if key < k2 {
+						ks := append(ks, "")
+						copy(ks[i+1:], ks[i:])
+						ks[i] = key
+						break
+					}
+				}
+			} else {
+				vs[v] = []dkey{key}
+			}
+			vs[wildcard] = append(vs[wildcard], key)
+		} else {
+			idxs[k] = map[string][]dkey{v: {key}}
+		}
+	}
+}
+
+// MUST be under mutex!
+func deleteFromIdx(idxs map[string]map[string][]dkey, it item, key dkey) {
+	for k, v := range it.idxs {
+		if vs, ok := idxs[k]; ok {
+			if ks, ok := vs[v]; ok {
+				for i, k2 := range ks {
+					if k2 == key {
+						ks = append(ks[:i], ks[i+1:]...)
+						return
+					}
+				}
+			}
+		}
+	}
+}
+
+func (s *server) deleteData(key dkey) {
+	s.data.Lock()
+	defer s.data.Unlock()
+	if it, ok := s.data.items[key]; ok {
+		deleteFromIdx(s.data.idxs, it, key)
+		delete(s.data.items, key)
+	}
+}
+
+func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bool, []byte) {
+	s.data.Lock()
+	defer s.data.Unlock()
+
+	key := toKey(oldKey)
+	if it, ok := s.data.items[key]; ok {
+		if bytes.Equal(it.data, oldData) {
+			newIt := item{idxs: it.idxs, data: newData}
+			s.data.items[key] = newIt
+			// TODO: remove old indices
+			// TODO: update indices
+			return true, nil
+		} else {
+			return false, it.data
+		}
+	} else {
+		return false, nil
+	}
 }
 
 func (s *server) PostObject(_ context.Context, req *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
-	s.putData(toKey(req.Key), req.Data)
-	return &pb.PostObjectResponse{}, nil
+	ok := s.putData(toKey(req.Key), toIdx(req.Key), req.Data)
+	return &pb.PostObjectResponse{Success: ok}, nil
 }
 
 func (s *server) GetObject(_ context.Context, req *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {
 	// use intermediate map to prevent duplicates in result
-	result := make(map[key][]byte)
+	result := make(map[dkey][]byte)
 
-	for _, query := range req.Keys {
-		asKey := toKey(query)
+	for _, k := range req.Keys {
+		asKey := toKey(k)
 		if d, ok := s.getData(asKey); ok {
-			// if key matches completely, there are no wildcards
+			// if dkey matches completely, there are no wildcards
 			result[asKey] = d
 		} else {
-			// no fancy indexes, just a complete table scan
-			for _, k := range s.getKeys() {
-				keyPb := toPb(k)
-				ok = len(query.Parts) == len(keyPb.Parts)
-				for i := 0; ok && i < len(keyPb.Parts); i += 1 {
-					left, right := query.Parts[i], keyPb.Parts[i]
-					ok = ok && left.Key == right.Key && left.Value == right.Value || left.Value == wildcard
-				}
-				if d, lastCheck := s.getData(k); ok && lastCheck {
-					result[k] = d
+			query := toIdx(k)
+			for _, k2 := range s.getKeys(query) {
+				if d, ok = s.getData(k2); ok {
+					result[k2] = d
 				}
 			}
 		}
@@ -144,11 +257,14 @@ func (s *server) DeleteObject(_ context.Context, req *pb.DeleteObjectRequest) (*
 		kvs := toKey(k)
 		if _, ok := s.getData(kvs); ok {
 			s.deleteData(kvs)
-		} else {
-			// TODO: return not-found error
 		}
 	}
 	return &empty.Empty{}, nil
+}
+
+func (s *server) MutateObject(ctx context.Context, req *pb.MutateObjectRequest) (*pb.MutateObjectResponse, error) {
+	ok, current := s.mutateData(req.GetOldKey(), req.GetNewKey(), req.GetOldData(), req.GetNewData())
+	return &pb.MutateObjectResponse{Success: ok, Current: current}, nil
 }
 
 func main() {
