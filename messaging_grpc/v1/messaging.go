@@ -95,7 +95,7 @@ func (s server) getCategory(m *pb.CustomerMessage) (cat pb.MessageCategory, err 
 	return
 }
 
-func (s server) storeMessage(m *pb.CustomerMessage) error {
+func (s server) storeMessage(m *pb.CustomerMessage) (bool, error) {
 	key := createKey(m)
 
 	data, _ := proto.Marshal(m)
@@ -116,13 +116,14 @@ func (s server) storeMessage(m *pb.CustomerMessage) error {
 	resp, err := c.PostObject(ctx, r)
 	if err != nil {
 		log.Printf("WARN: storing message: %v", err)
+		return false, err
 	} else if resp.Success {
 		log.Printf("DEBUG: stored message %v", m.Body)
 	} else {
 		log.Printf("WARN: message already stored %v", m.Body)
 	}
 
-	return err
+	return resp.Success, err
 }
 
 func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.CustomerMessage, err error) {
@@ -162,7 +163,7 @@ func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.Cu
 	return
 }
 
-func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) error {
+func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) (bool, error) {
 	oldKey := createKey(oldM)
 	newKey := createKey(newM)
 
@@ -182,10 +183,17 @@ func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err = c.MutateObject(ctx, r)
-	log.Printf("DEBUG: mutated message \"%s\"", oldM.Body)
+	resp, err := c.MutateObject(ctx, r)
+	if err != nil {
+		log.Printf("WARN: could not mutated message \"%s\"", oldM.Body)
+		return false, err
+	} else if !resp.Success {
+		log.Printf("WARN: could not mutated message \"%s\"", oldM.Body)
+	} else {
+		log.Printf("DEBUG: mutated message \"%s\"", oldM.Body)
+	}
 
-	return err
+	return resp.Success, err
 }
 
 func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp *pb.PostMessageResponse, err error) {
@@ -205,15 +213,19 @@ func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp
 	m.Category = cat
 
 	// store message
+	var ok bool
 	for i := -1; (err != nil || i < 0) && i < maxRetries; i += 1 {
-		err = s.storeMessage(m)
+		ok, err = s.storeMessage(m)
 	}
 	if err != nil {
-		log.Printf("ERROR: could not store message: %s", err)
+		log.Printf("ERROR: error while storing message: %s", err)
 		return
+	} else if !ok {
+		log.Printf("WARN: could not store message: %s", m.Body)
+		return &pb.PostMessageResponse{}, nil
 	}
 
-	return
+	return &pb.PostMessageResponse{Message: &pb.PostMessageResponse_CustomerMessage{m}}, nil
 }
 
 // Claims a message.
@@ -222,8 +234,8 @@ func (s server) claimFirst(msgs []*pb.CustomerMessage) (m *pb.CustomerMessage, e
 		oldM := *msgs[i]
 		m = msgs[i]
 		m.Status = pb.Status_IN_PROCESS
-		err = s.mutateMessage(&oldM, m)
-		if err != nil {
+		ok, err := s.mutateMessage(&oldM, m)
+		if !ok || err != nil {
 			m = nil
 		}
 	}
@@ -237,7 +249,11 @@ func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.G
 	}
 
 	m, err := s.claimFirst(msgs)
-	if err == nil {
+	if err != nil {
+		log.Printf("WARN: error getting question: %s", err)
+	} else if m == nil {
+		resp = &pb.GetQuestionResponse{}
+	} else {
 		resp = &pb.GetQuestionResponse{Message: &pb.GetQuestionResponse_CustomerMessage{m}}
 	}
 
@@ -251,7 +267,11 @@ func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (resp *pb
 	}
 
 	m, err := s.claimFirst(msgs)
-	if m != nil {
+	if err != nil {
+		log.Printf("WARN: error getting question: %s", err)
+	} else if m == nil {
+		resp = &pb.GetComplaintResponse{}
+	} else {
 		resp = &pb.GetComplaintResponse{Message: &pb.GetComplaintResponse_CustomerMessage{m}}
 	}
 
@@ -265,7 +285,11 @@ func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.G
 	}
 
 	m, err := s.claimFirst(msgs)
-	if m != nil {
+	if err != nil {
+		log.Printf("WARN: error getting question: %s", err)
+	} else if m == nil {
+		resp = &pb.GetFeedbackResponse{}
+	} else {
 		resp = &pb.GetFeedbackResponse{Message: &pb.GetFeedbackResponse_CustomerMessage{m}}
 	}
 

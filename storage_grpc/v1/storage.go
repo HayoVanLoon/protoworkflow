@@ -40,6 +40,10 @@ const (
 // alias for readability
 type dkey string
 
+type keyVal struct {
+	k, v string
+}
+
 // Flattens a pb.Key so it can be used as a data map dkey
 func toKey(k *pb.Key) dkey {
 	var ss []string
@@ -50,13 +54,15 @@ func toKey(k *pb.Key) dkey {
 }
 
 // Turns indexed values into an index map
-func toIdx(k *pb.Key) map[string]string {
-	result := make(map[string]string)
+func toIdx(k *pb.Key) []keyVal {
+	var result []keyVal
 	for _, p := range k.Parts {
-		result[p.Key] = p.Value
+		result = append(result, keyVal{p.Key, p.Value})
+		result = append(result, keyVal{p.Key, wildcard})
 	}
 	for _, p := range k.IndexedValues {
-		result[p.Key] = p.Value
+		result = append(result, keyVal{p.Key, p.Value})
+		result = append(result, keyVal{p.Key, wildcard})
 	}
 	return result
 }
@@ -73,7 +79,7 @@ func toPb(k dkey) *pb.Key {
 }
 
 type item struct {
-	idx  map[string]string
+	idx  []keyVal
 	data []byte
 }
 
@@ -101,14 +107,14 @@ func (s *server) getData(key dkey) ([]byte, bool) {
 	return nil, false
 }
 
-func (s *server) getKeys(query map[string]string) []dkey {
+func (s *server) getKeys(query []keyVal) []dkey {
 	s.data.RLock()
 	defer s.data.RUnlock()
 
 	var result []dkey
-	for k, v := range query {
-		if vs, ok := s.data.idxs[k]; ok {
-			if ks, ok := vs[v]; ok {
+	for _, kv := range query {
+		if vs, ok := s.data.idxs[kv.k]; ok {
+			if ks, ok := vs[kv.v]; ok {
 				if result == nil {
 					result = ks
 				} else {
@@ -134,44 +140,51 @@ func (s *server) getKeys(query map[string]string) []dkey {
 	return result
 }
 
-func (s *server) putData(key dkey, idx map[string]string, d []byte) bool {
+func (s *server) putData(key dkey, idx []keyVal, d []byte) bool {
 	s.data.Lock()
 	defer s.data.Unlock()
 
 	if _, ex := s.data.items[key]; ex {
+		log.Printf("WARN: already have message with key %s", key)
 		return false
 	}
 
 	it := item{idx: idx, data: d}
 	s.data.items[key] = it
 
-	s.updateIndexes(it.idx, key)
+	s.addToIdxs(it.idx, key)
 
 	return true
 }
 
 // MUST be under mutex!
-func (s *server) updateIndexes(idx map[string]string, key dkey) {
-	for k, v := range idx {
-		if vs, ok := s.data.idxs[k]; ok {
-			if ks, ok := vs[v]; ok {
+func (s *server) addToIdxs(idx []keyVal, key dkey) {
+	for _, kv := range idx {
+		if vs, ok := s.data.idxs[kv.k]; ok {
+			if ks, ok := vs[kv.v]; ok {
 				// insert dkey into a sorted array
-				for i, k2 := range ks {
-					if key < k2 {
-						ks := append(ks, "")
-						copy(ks[i+1:], ks[i:])
-						ks[i] = key
-						break
-					}
-				}
+				ks = insertItem(ks, key)
+				s.data.idxs[kv.k][kv.v]= ks
 			} else {
-				vs[v] = []dkey{key}
+				vs[kv.v] = []dkey{key}
+				s.data.idxs[kv.k] = vs
 			}
-			vs[wildcard] = append(vs[wildcard], key)
 		} else {
-			s.data.idxs[k] = map[string][]dkey{v: {key}}
+			s.data.idxs[kv.k] = map[string][]dkey{kv.v: {key}}
 		}
 	}
+}
+
+func insertItem(ks []dkey, key dkey) []dkey {
+	for i, k2 := range ks {
+		if k2 < key {
+			ks = append(ks, key)
+			copy(ks[:i], ks[:i+1])
+			ks[i] = key
+			break
+		}
+	}
+	return ks
 }
 
 func removeItem(ks []dkey, key dkey) []dkey {
@@ -184,15 +197,14 @@ func removeItem(ks []dkey, key dkey) []dkey {
 }
 
 // MUST be under mutex!
-func (s *server) deleteFromIdx(idx map[string]string, key dkey) {
-	for k, v := range idx {
-		if vs, ok := s.data.idxs[k]; ok {
-			if ks, ok := vs[v]; ok {
+func (s *server) deleteFromIdxs(idx []keyVal, key dkey) {
+	for _, kv := range idx {
+		if vs, ok := s.data.idxs[kv.k]; ok {
+			if ks, ok := vs[kv.v]; ok {
 				ks = removeItem(ks, key)
-				s.data.idxs[k][v] = ks
+				s.data.idxs[kv.k][kv.v] = ks
 			}
 		}
-		s.data.idxs[k][wildcard] = removeItem(s.data.idxs[k][wildcard], key)
 	}
 }
 
@@ -200,7 +212,7 @@ func (s *server) deleteData(key dkey) {
 	s.data.Lock()
 	defer s.data.Unlock()
 	if it, ok := s.data.items[key]; ok {
-		s.deleteFromIdx(it.idx, key)
+		s.deleteFromIdxs(it.idx, key)
 		delete(s.data.items, key)
 	}
 }
@@ -214,8 +226,8 @@ func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bo
 		if bytes.Equal(it.data, oldData) {
 			newIt := item{idx: toIdx(newKey), data: newData}
 			s.data.items[key] = newIt
-			s.deleteFromIdx(toIdx(oldKey), key)
-			s.updateIndexes(toIdx(newKey), key)
+			s.deleteFromIdxs(toIdx(oldKey), key)
+			s.addToIdxs(toIdx(newKey), key)
 			return true, nil
 		} else {
 			return false, it.data

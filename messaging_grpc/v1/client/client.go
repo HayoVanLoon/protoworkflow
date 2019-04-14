@@ -81,6 +81,9 @@ func getQuestion(port string) error {
 	resp, err := c.GetQuestion(ctx, r)
 
 	log.Printf("%v\n", resp)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	}
 
 	return err
 }
