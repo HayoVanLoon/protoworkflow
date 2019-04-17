@@ -49,6 +49,25 @@ func newServer(services map[string]string) *server {
 	return &server{services}
 }
 
+// Provides a storage client
+func (s server) getStorageClient() (storagepb.StorageClient, func(), error) {
+	conn, err := s.getConn(storageService)
+	if err != nil {
+		log.Print("ERROR: could not open connection to storage")
+		return nil, nil, err
+	}
+	return storagepb.NewStorageClient(conn), closeConnFn(conn), err
+}
+
+// Provides a connection-closing function
+func closeConnFn(conn *grpc.ClientConn) func() {
+	return func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("WARN: error closing connection: %v", err)
+		}
+	}
+}
+
 // Establishes a connection to a service
 func (s server) getConn(service string) (*grpc.ClientConn, error) {
 	conn, err := grpc.Dial(s.services[service], grpc.WithInsecure())
@@ -95,20 +114,17 @@ func (s server) getCategory(m *pb.CustomerMessage) (cat pb.MessageCategory, err 
 	return
 }
 
-func (s server) storeMessage(m *pb.CustomerMessage) (bool, error) {
+func (s server) storeMessage(m *pb.CustomerMessage) (string, error) {
 	key := createKey(m)
 
 	data, _ := proto.Marshal(m)
 	r := &storagepb.PostObjectRequest{Key: key, Data: data}
 
-	conn, err := s.getConn(storageService)
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Printf("WARN: error closing connection: %v", err)
-		}
-	}()
-
-	c := storagepb.NewStorageClient(conn)
+	c, closeConn, err := s.getStorageClient()
+	if err != nil {
+		return "", err
+	}
+	defer closeConn()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -116,14 +132,14 @@ func (s server) storeMessage(m *pb.CustomerMessage) (bool, error) {
 	resp, err := c.PostObject(ctx, r)
 	if err != nil {
 		log.Printf("WARN: storing message: %v", err)
-		return false, err
-	} else if resp.Success {
+		return "", err
+	} else if resp.GetName() != "" {
 		log.Printf("DEBUG: stored message %v", m.Body)
 	} else {
 		log.Printf("WARN: message already stored %v", m.Body)
 	}
 
-	return resp.Success, err
+	return resp.GetName(), err
 }
 
 func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.CustomerMessage, err error) {
@@ -136,14 +152,11 @@ func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.Cu
 
 	r := &storagepb.GetObjectRequest{Keys: []*storagepb.Key{query}}
 
-	conn, err := s.getConn(storageService)
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Printf("WARN: error closing connection: %v", err)
-		}
-	}()
-
-	c := storagepb.NewStorageClient(conn)
+	c, closeConn, err := s.getStorageClient()
+	if err != nil {
+		return nil, err
+	}
+	defer closeConn()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -171,14 +184,11 @@ func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) (bool, error) {
 	newData, _ := proto.Marshal(newM)
 	r := &storagepb.MutateObjectRequest{OldKey: oldKey, NewKey: newKey, OldData: oldData, NewData: newData}
 
-	conn, err := s.getConn(storageService)
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Printf("WARN: error closing connection: %v", err)
-		}
-	}()
-
-	c := storagepb.NewStorageClient(conn)
+	c, closeConn, err := s.getStorageClient()
+	if err != nil {
+		return false, err
+	}
+	defer closeConn()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -213,18 +223,19 @@ func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp
 	m.Category = cat
 
 	// store message
-	var ok bool
+	var name string
 	for i := -1; (err != nil || i < 0) && i < maxRetries; i += 1 {
-		ok, err = s.storeMessage(m)
+		name, err = s.storeMessage(m)
 	}
 	if err != nil {
 		log.Printf("ERROR: error while storing message: %s", err)
 		return
-	} else if !ok {
+	} else if name == "" {
 		log.Printf("WARN: could not store message: %s", m.Body)
 		return &pb.PostMessageResponse{}, nil
 	}
 
+	m.Name = name
 	return &pb.PostMessageResponse{Message: &pb.PostMessageResponse_CustomerMessage{m}}, nil
 }
 
@@ -312,8 +323,22 @@ func (server) SearchMessages(context.Context, *pb.SearchMessagesRequest) (*pb.Se
 	panic("implement me")
 }
 
-func (server) DeleteMessage(context.Context, *pb.DeleteMessageRequest) (*empty.Empty, error) {
-	panic("implement me")
+func (s server) DeleteMessage(ctx context.Context, req *pb.DeleteMessageRequest) (*empty.Empty, error) {
+	r := &storagepb.DeleteObjectRequest{Keys: []*storagepb.Key{{Name: req.Name}}}
+
+	c, closeConn, err := s.getStorageClient()
+	if err != nil {
+		return nil, err
+	}
+	defer closeConn()
+
+	_, err = c.DeleteObject(ctx, r)
+	if err != nil {
+		log.Printf("WARN: error getting stored message: %v", err)
+		return nil, err
+	}
+
+	return &empty.Empty{}, err
 }
 
 func main() {

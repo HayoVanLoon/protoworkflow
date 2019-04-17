@@ -19,6 +19,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
@@ -46,6 +47,10 @@ type keyVal struct {
 
 // Flattens a pb.Key so it can be used as a data map dkey
 func toKey(k *pb.Key) dkey {
+	if k.GetName() != "" {
+		return dkey(k.GetName())
+	}
+
 	var ss []string
 	for _, p := range k.Parts {
 		ss = append(ss, p.Key+kvSep+p.Value)
@@ -140,13 +145,14 @@ func (s *server) getKeys(query []keyVal) []dkey {
 	return result
 }
 
-func (s *server) putData(key dkey, idx []keyVal, d []byte) bool {
+func (s *server) putData(key dkey, idx []keyVal, d []byte) (dkey, error) {
 	s.data.Lock()
 	defer s.data.Unlock()
 
 	if _, ex := s.data.items[key]; ex {
-		log.Printf("WARN: already have message with key %s", key)
-		return false
+		m := fmt.Sprintf("already have message with key %s", key)
+		log.Print(m)
+		return "", fmt.Errorf(m)
 	}
 
 	it := item{idx: idx, data: d}
@@ -154,7 +160,7 @@ func (s *server) putData(key dkey, idx []keyVal, d []byte) bool {
 
 	s.addToIdxs(it.idx, key)
 
-	return true
+	return key, nil
 }
 
 // MUST be under mutex!
@@ -238,8 +244,11 @@ func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bo
 }
 
 func (s *server) PostObject(_ context.Context, req *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
-	ok := s.putData(toKey(req.Key), toIdx(req.Key), req.Data)
-	return &pb.PostObjectResponse{Success: ok}, nil
+	key, err := s.putData(toKey(req.Key), toIdx(req.Key), req.Data)
+	if err != nil{
+		return nil, fmt.Errorf("could not store ")
+	}
+	return &pb.PostObjectResponse{Name: string(key)}, nil
 }
 
 func (s *server) GetObject(_ context.Context, req *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {

@@ -46,7 +46,9 @@ message PostObjectRequest {
 
 
 message PostObjectResponse {
-    bool success = 1;
+
+    // Name by which object is stored.
+    string name = 1;
 }
 
 
@@ -68,6 +70,9 @@ message GetObjectResponse {
     // Data matching keys.
     // Indexes match keys list elements
     repeated bytes data = 2;
+
+    // Maximum number of items returned.
+    int32 limit = 3;
 }
 
 
@@ -95,10 +100,14 @@ message MutateObjectResponse {
 
 message Key {
 
-    // A key consists of a list of key-values.
-    repeated Part parts = 1;
+    // Name by which object is stored.
+    // Not used when posting new objects
+    string name = 1;
 
-    repeated Part indexed_values = 2;
+    // A key consists of a list of key-values.
+    repeated Part parts = 2;
+
+    repeated Part indexed_values = 3;
 
     message Part {
 

@@ -12,20 +12,23 @@ option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/
 // A message sent by a customer or prospect.
 message CustomerMessage {
 
+    // message id
+    string name = 1;
+
     // The message text.
-    string body = 1;
+    string body = 2;
 
     // Timestamp when message was first received.
-    int64 timestamp = 2;
+    int64 timestamp = 3;
 
     // The customer.
-    contact.v1.Sender sender = 3;
+    contact.v1.Sender sender = 4;
 
     // Message category implying course of action.
-    MessageCategory category = 4;
+    MessageCategory category = 5;
 
     // Message handling status.
-    Status status = 5;
+    Status status = 6;
 }
 
 

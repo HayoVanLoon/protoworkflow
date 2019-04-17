@@ -203,5 +203,7 @@ message SearchMessagesResponse {
 
 
 message DeleteMessageRequest {
+
+    // The message id.
     string name = 1;
 }
