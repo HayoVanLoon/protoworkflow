@@ -39,6 +39,7 @@ const (
 	categorisingService = "categorising-service"
 	defaultPort         = "8080"
 	maxRetries          = 3
+	messageLimit        = 10
 )
 
 type server struct {
@@ -142,7 +143,7 @@ func (s server) storeMessage(m *pb.CustomerMessage) (string, error) {
 	return resp.GetName(), err
 }
 
-func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.CustomerMessage, err error) {
+func (s server) getMessages(cat pb.MessageCategory, st pb.Status, l int32) (msgs []*pb.CustomerMessage, err error) {
 	query := &storagepb.Key{
 		IndexedValues: []*storagepb.Key_Part{
 			{Key: "category", Value: cat.String()},
@@ -150,7 +151,7 @@ func (s server) getMessages(cat pb.MessageCategory, st pb.Status) (msgs []*pb.Cu
 		},
 	}
 
-	r := &storagepb.GetObjectRequest{Keys: []*storagepb.Key{query}}
+	r := &storagepb.GetObjectRequest{Keys: []*storagepb.Key{query}, Limit: l}
 
 	c, closeConn, err := s.getStorageClient()
 	if err != nil {
@@ -254,57 +255,78 @@ func (s server) claimFirst(msgs []*pb.CustomerMessage) (m *pb.CustomerMessage, e
 }
 
 func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.GetQuestionResponse, err error) {
-	msgs, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO)
-	if err != nil {
-		log.Printf("WARN: error retrieving messages: %s", err)
+	for {
+		msgs, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO, messageLimit)
+		if err != nil {
+			log.Printf("WARN: error retrieving messages: %s", err)
+			return nil, err
+		}
+		if len(msgs) == 0 {
+			break
+		}
+
+		m, err := s.claimFirst(msgs)
+		if err != nil {
+			log.Printf("WARN: error getting question: %s", err)
+			return nil, err
+		} else {
+			return &pb.GetQuestionResponse{
+				Message: &pb.GetQuestionResponse_CustomerMessage{m},
+			}, err
+		}
 	}
 
-	m, err := s.claimFirst(msgs)
-	if err != nil {
-		log.Printf("WARN: error getting question: %s", err)
-	} else if m == nil {
-		resp = &pb.GetQuestionResponse{}
-	} else {
-		resp = &pb.GetQuestionResponse{Message: &pb.GetQuestionResponse_CustomerMessage{m}}
-	}
-
-	return
+	return &pb.GetQuestionResponse{}, nil
 }
 
-func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (resp *pb.GetComplaintResponse, err error) {
-	msgs, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO)
-	if err != nil {
-		log.Printf("WARN: error retrieving messages: %s", err)
+func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.GetComplaintResponse, error) {
+	for {
+		msgs, err := s.getMessages(pb.MessageCategory_COMPLAINT, pb.Status_TO_DO, messageLimit)
+		if err != nil {
+			log.Printf("WARN: error retrieving messages: %s", err)
+			return nil, err
+		}
+		if len(msgs) == 0 {
+			break
+		}
+
+		m, err := s.claimFirst(msgs)
+		if err != nil {
+			log.Printf("WARN: error getting question: %s", err)
+			return nil, err
+		} else {
+			return &pb.GetComplaintResponse{
+				Message: &pb.GetComplaintResponse_CustomerMessage{m},
+			}, err
+		}
 	}
 
-	m, err := s.claimFirst(msgs)
-	if err != nil {
-		log.Printf("WARN: error getting question: %s", err)
-	} else if m == nil {
-		resp = &pb.GetComplaintResponse{}
-	} else {
-		resp = &pb.GetComplaintResponse{Message: &pb.GetComplaintResponse_CustomerMessage{m}}
-	}
-
-	return
+	return &pb.GetComplaintResponse{}, nil
 }
 
 func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.GetFeedbackResponse, err error) {
-	msgs, err := s.getMessages(pb.MessageCategory_FEEDBACK, pb.Status_TO_DO)
-	if err != nil {
-		log.Printf("WARN: error retrieving messages: %s", err)
+	for {
+		msgs, err := s.getMessages(pb.MessageCategory_FEEDBACK, pb.Status_TO_DO, messageLimit)
+		if err != nil {
+			log.Printf("WARN: error retrieving messages: %s", err)
+			return nil, err
+		}
+		if len(msgs) == 0 {
+			break
+		}
+
+		m, err := s.claimFirst(msgs)
+		if err != nil {
+			log.Printf("WARN: error getting question: %s", err)
+			return nil, err
+		} else {
+			return &pb.GetFeedbackResponse{
+				Message: &pb.GetFeedbackResponse_CustomerMessage{m},
+			}, err
+		}
 	}
 
-	m, err := s.claimFirst(msgs)
-	if err != nil {
-		log.Printf("WARN: error getting question: %s", err)
-	} else if m == nil {
-		resp = &pb.GetFeedbackResponse{}
-	} else {
-		resp = &pb.GetFeedbackResponse{Message: &pb.GetFeedbackResponse_CustomerMessage{m}}
-	}
-
-	return
+	return &pb.GetFeedbackResponse{}, nil
 }
 
 func (server) MoveMessage(context.Context, *pb.MoveMessageRequest) (*pb.MoveMessageResponse, error) {
@@ -315,8 +337,33 @@ func (server) UpdateStatus(context.Context, *pb.UpdateStatusRequest) (*pb.Update
 	panic("implement me")
 }
 
-func (server) GetMessage(context.Context, *pb.GetMessageRequest) (*pb.GetMessageResponse, error) {
-	panic("implement me")
+func (s server) GetMessage(_ context.Context, req *pb.GetMessageRequest) (*pb.GetMessageResponse, error) {
+	c, closeConn, err := s.getStorageClient()
+	if err != nil {
+		return nil, err
+	}
+	defer closeConn()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	key := req.GetName()
+	r := &storagepb.GetObjectRequest{Keys: []*storagepb.Key{{Name: key}}, Limit: 1}
+
+	objResp, err := c.GetObject(ctx, r)
+	if err != nil {
+		log.Printf("WARN: error fetching message '%s'", key)
+		return nil, err
+	}
+
+	m := &pb.CustomerMessage{}
+	err = proto.Unmarshal(objResp.Data[0], m)
+	if err != nil {
+		log.Printf("WARN: error unmarshalling message '%s'", key)
+		return nil, err
+	}
+
+	return &pb.GetMessageResponse{Message: &pb.GetMessageResponse_CustomerMessage{m}}, nil
 }
 
 func (server) SearchMessages(context.Context, *pb.SearchMessagesRequest) (*pb.SearchMessagesResponse, error) {
