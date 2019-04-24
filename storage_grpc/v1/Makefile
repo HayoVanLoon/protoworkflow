@@ -22,17 +22,19 @@ protoc:
 	@echo Go App, skipped
 
 build:
-	$(DOCKER) build -t $(IMAGE_NAME) .
+	docker build -t $(IMAGE_NAME) .
 
 run:
 	go build categorising.go
 
 docker-run:
-	$(DOCKER) run -p 8080:8080 $(IMAGE_NAME)
+	docker run --network="host" $(IMAGE_NAME) \
+		/usr/local/bin/app \
+		-port=8080
 
 push-gcr:
-	$(DOCKER) tag $(IMAGE_NAME) gcr.io/$(PROJECT_ID)/$(IMAGE_NAME):$(TAG)
-	$(DOCKER) push gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
+	docker tag $(IMAGE_NAME) gcr.io/$(PROJECT_ID)/$(IMAGE_NAME):$(TAG)
+	docker push gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
 
 #
 #mocks:

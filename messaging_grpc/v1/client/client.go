@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	defaultHost = "192.168.39.110"
+	defaultHost = "localhost"
 	defaultPort = "8080"
 )
 

@@ -22,14 +22,28 @@ protoc:
 	@echo Go App, skipped
 
 build:
-	$(DOCKER) build -t $(IMAGE_NAME) .
+	docker build -t $(IMAGE_NAME) .
+
+run:
+	go build messaging.go \
+		-port=8082 \
+		-storage-host=localhost \
+		-storage-port=8080 \
+		-categorising-host=localhost \
+		-categorising-port=8081
 
 docker-run:
-	$(DOCKER) run -p 8082:8080 $(IMAGE_NAME)
+	docker run --network="host" $(IMAGE_NAME) \
+		/usr/local/bin/app \
+		-port=8082 \
+		-storage-host=localhost \
+		-storage-port=8080 \
+		-categorising-host=localhost \
+		-categorising-port=8081
 
 push-gcr:
-	$(DOCKER) tag $(IMAGE_NAME) gcr.io/$(PROJECT_ID)/$(IMAGE_NAME):$(TAG)
-	$(DOCKER) push gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
+	docker tag $(IMAGE_NAME) gcr.io/$(PROJECT_ID)/$(IMAGE_NAME):$(TAG)
+	docker push gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
 
 #
 #mocks:

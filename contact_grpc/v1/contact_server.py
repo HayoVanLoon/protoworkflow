@@ -10,13 +10,19 @@ from bobsknobshop.messaging.v1 import messaging_pb2_grpc
 from concurrent import futures
 
 DEFAULT_PORT = 8080
+DEFAULT_TIMEOUT = 10
+
+
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 
 class ContactServer(contact_pb2_grpc.ContactServicer):
 
     def __init__(self, messaging_host, messaging_port):
         super(ContactServer, self).__init__()
-        self.messaging_target = messaging_host + ':' + messaging_port
+        self.messaging_target = messaging_host + ':' + str(messaging_port)
 
     def PostMessage(self, request, context):
         message_req = messaging_pb2.PostMessageRequest()
@@ -32,9 +38,10 @@ class ContactServer(contact_pb2_grpc.ContactServicer):
             stub = messaging_pb2_grpc.MessagingStub(channel)
 
             try:
-                message_resp = stub.PostMessage(message_req)
+                message_resp = stub.PostMessage(message_req,
+                                                timeout=DEFAULT_TIMEOUT)
             except Exception as ex:
-                logging.warning(ex)
+                LOGGER.warning(ex)
 
         return resp
 
@@ -68,6 +75,10 @@ def serve():
 
     server.add_insecure_port('[::]:%s' % params['port'])
     server.start()
+
+    LOGGER.info('server started with messaging target {}'
+                .format(contact_server.messaging_target))
+
     try:
         while True:
             time.sleep(1000000)

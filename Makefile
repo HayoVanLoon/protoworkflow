@@ -15,6 +15,10 @@ run-categorising:
 docker-run-categorising:
 	@$(MAKE) -C categorising_grpc docker-run
 
+# Storage gRPC Server
+build-storage:
+	@$(MAKE) -C storage_grpc build
+
 run-storage:
 	@$(MAKE) -C storage_grpc run
 
@@ -30,3 +34,13 @@ run-contact:
 
 docker-run-contact:
 	@$(MAKE) -C contact_grpc docker-run
+
+# Messaging gRPC Server
+build-messaging:
+	$(MAKE) -C messaging_grpc build
+
+run-messaging:
+	@$(MAKE) -C messaging_grpc run
+
+docker-run-messaging:
+	@$(MAKE) -C messaging_grpc docker-run

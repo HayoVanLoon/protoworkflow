@@ -51,7 +51,7 @@ else
 endif
 
 build:
-	$(DOCKER) build -t $(IMAGE_NAME) .
+	docker build -t $(IMAGE_NAME) .
 
 test: clean protoc
 	$(VENV); pytest
@@ -60,7 +60,11 @@ run:
 	$(VENV); python contact_server.py
 
 docker-run:
-	$(DOCKER) run -p 8083:8080 $(IMAGE_NAME)
+	docker run --network="host" $(IMAGE_NAME) \
+		/usr/bin/python3 contact_server.py \
+		--port=8083 \
+		--messaging_host=localhost \
+		--messaging_port=8082
 
 test-call:
 	$(VENV); python contact_client.py

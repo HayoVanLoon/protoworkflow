@@ -246,7 +246,7 @@ func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bo
 func (s *server) PostObject(_ context.Context, req *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
 	key, err := s.putData(toKey(req.Key), toIdx(req.Key), req.Data)
 	if err != nil{
-		return nil, fmt.Errorf("could not store ")
+		return nil, fmt.Errorf("could not store %s", key)
 	}
 	return &pb.PostObjectResponse{Name: string(key)}, nil
 }
