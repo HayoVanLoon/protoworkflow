@@ -1,6 +1,6 @@
 
 PROJECT_NAME := protoworkflow
-MODULE_NAME := categorising
+MODULE_NAME := storage
 
 # Docker-related
 IMAGE_NAME := $(PROJECT_NAME)_$(MODULE_NAME)_grpc

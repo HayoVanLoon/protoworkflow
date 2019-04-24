@@ -2,6 +2,10 @@
 PROJECT_NAME := protoworkflow
 MODULE_NAME := contact
 
+# Docker-related
+IMAGE_NAME := $(PROJECT_NAME)_$(MODULE_NAME)_grpc
+TAG := latest
+
 # VirtualEnv
 VENV_DIR := venv
 VENV := . $(VENV_DIR)/bin/activate
@@ -12,6 +16,7 @@ MODULE := $(MODULE_NAME)
 PROTO_VERSION := v1
 PACKAGE_DIR := $(ORGANISATION)/$(MODULE)/$(PROTO_VERSION)
 PROTO_ROOT := ../../proto
+PROTO_DEPS := $(PROTO_ROOT)/$(ORGANISATION)/messaging/$(PROTO_VERSION)/*.proto
 # Protocol Buffer Variables (Python)
 PYTHON_OUT := .
 
@@ -41,17 +46,21 @@ else
 		--grpc_python_out=$(PYTHON_OUT) \
 		-I$(PROTO_GOOGLE_APIS) \
 		-I$(PROTO_ROOT) \
-		$(PROTO_ROOT)/$(PACKAGE_DIR)/*.proto
+		$(PROTO_ROOT)/$(PACKAGE_DIR)/*.proto \
+		$(PROTO_DEPS)
 endif
 
 build:
-	@echo Not implemented
+	$(DOCKER) build -t $(IMAGE_NAME) .
 
 test: clean protoc
 	$(VENV); pytest
 
 run:
 	$(VENV); python contact_server.py
+
+docker-run:
+	$(DOCKER) run -p 8083:8080 $(IMAGE_NAME)
 
 test-call:
 	$(VENV); python contact_client.py

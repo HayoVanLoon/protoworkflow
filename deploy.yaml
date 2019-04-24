@@ -68,6 +68,8 @@ spec:
       containers:
         - name: contact
           image: protoworkflow_contact_grpc
+          command: ["/usr/local/bin/app"]
+          args: ["-port", "8080"]
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
@@ -81,9 +83,11 @@ metadata:
 spec:
   selector:
     app: messaging
+  type: NodePort
   ports:
     - protocol: TCP
       port: 8080
+      nodePort: 30000
 
 ---
 

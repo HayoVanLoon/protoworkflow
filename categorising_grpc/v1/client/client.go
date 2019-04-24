@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/categorising/v1"
 	"google.golang.org/grpc"
@@ -27,22 +28,22 @@ import (
 )
 
 const (
-	host = "localhost"
-	port = 8080
+	defaultHost = "192.168.39.110"
+	defaultPort = "8081"
 )
 
-func getConn() (*grpc.ClientConn, error) {
-	conn, err := grpc.Dial(fmt.Sprintf("%v:%v", host, port), grpc.WithInsecure())
+func getConn(host, port string) (*grpc.ClientConn, error) {
+	conn, err := grpc.Dial(host+":"+port, grpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}
 	return conn, nil
 }
 
-func getCategory(m string) error {
+func getCategory(host, port, m string) error {
 	r := &pb.GetCategoryRequest{Text: m}
 
-	conn, err := getConn()
+	conn, err := getConn(host, port)
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Panicf("error closing connection: %v", err)
@@ -62,8 +63,12 @@ func getCategory(m string) error {
 }
 
 func main() {
-	fmt.Println(getCategory("This does not please me."))
-	fmt.Println(getCategory("Everything is awesome."))
-	fmt.Println(getCategory("Ça je n'aime pas."))
-	fmt.Println(getCategory("I have a question about this product. Can I eat it?"))
+	var host = flag.String("host", defaultHost, "categorising service host")
+	var port = flag.String("port", defaultPort, "categorising service port")
+	flag.Parse()
+
+	fmt.Println(getCategory(*host, *port, "This does not please me."))
+	fmt.Println(getCategory(*host, *port, "Everything is awesome."))
+	fmt.Println(getCategory(*host, *port, "Ça je n'aime pas."))
+	fmt.Println(getCategory(*host, *port, "I have a question about this product. Can I eat it?"))
 }

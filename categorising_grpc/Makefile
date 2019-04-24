@@ -8,6 +8,9 @@ protoc:
 run:
 	@$(MAKE) -C $(CURRENT_VERSION) run
 
+docker-run:
+	@$(MAKE) -C $(CURRENT_VERSION) docker-run
+
 build:
 	@$(MAKE) -C $(CURRENT_VERSION) build
 

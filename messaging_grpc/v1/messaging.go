@@ -210,7 +210,6 @@ func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) (bool, error) {
 func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp *pb.PostMessageResponse, err error) {
 	m := r.GetCustomerMessage()
 	m.Status = pb.Status_TO_DO
-	m.Timestamp = time.Now().UnixNano() / 1000000
 
 	// set category
 	var cat pb.MessageCategory
@@ -390,9 +389,9 @@ func (s server) DeleteMessage(ctx context.Context, req *pb.DeleteMessageRequest)
 
 func main() {
 	var port = flag.String("port", defaultPort, "port to listen on")
-	var storageHost = flag.String("storage", storageService, "storage service")
+	var storageHost = flag.String("storage-host", storageService, "storage service")
 	var storagePort = flag.String("storage-port", defaultPort, "storage service port")
-	var categorisingHost = flag.String("categorising-service", categorisingService, "categorising service")
+	var categorisingHost = flag.String("categorising-host", categorisingService, "categorising service")
 	var categorisingPort = flag.String("categorising-port", defaultPort, "categorising service port")
 	flag.Parse()
 

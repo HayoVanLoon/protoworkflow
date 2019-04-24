@@ -25,7 +25,7 @@ build:
 	$(DOCKER) build -t $(IMAGE_NAME) .
 
 docker-run:
-	$(DOCKER) run -p 8080:8080 $(IMAGE_NAME)
+	$(DOCKER) run -p 8082:8080 $(IMAGE_NAME)
 
 push-gcr:
 	$(DOCKER) tag $(IMAGE_NAME) gcr.io/$(PROJECT_ID)/$(IMAGE_NAME):$(TAG)

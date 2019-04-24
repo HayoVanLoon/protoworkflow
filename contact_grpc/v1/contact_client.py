@@ -1,17 +1,37 @@
-import contact_pb2
-import contact_pb2_grpc
+import argparse
 import grpc
+from bobsknobshop.contact.v1 import contact_pb2
+from bobsknobshop.contact.v1 import contact_pb2_grpc
+from google.protobuf import json_format
 
 
-def main():
-    with grpc.insecure_channel('localhost:50051') as channel:
+def main(params):
+    with grpc.insecure_channel(params['host'] + ':' + params['port']) as channel:
         stub = contact_pb2_grpc.ContactStub(channel)
 
         message = contact_pb2.PostMessageRequest()
         message.message = 'This does not please me.'
 
-        print(stub.PostMessage(message))
+        resp = stub.PostMessage(message)
+        print(json_format.MessageToJson(resp))
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--host',
+        help='contact service host',
+        default='localhost'
+    )
+
+    parser.add_argument(
+        '--port',
+        help='contact service port',
+        default=8083
+    )
+
+    args = parser.parse_args()
+    params = args.__dict__
+
+    main(params)

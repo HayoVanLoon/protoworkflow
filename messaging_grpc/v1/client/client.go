@@ -29,11 +29,11 @@ import (
 )
 
 const (
-	host = "localhost"
+	defaultHost = "192.168.39.110"
 	defaultPort = "8080"
 )
 
-func getConn(port string) (*grpc.ClientConn, error) {
+func getConn(host, port string) (*grpc.ClientConn, error) {
 	conn, err := grpc.Dial(host+":"+port, grpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
@@ -41,10 +41,10 @@ func getConn(port string) (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func postMessage(port string, m *pb.CustomerMessage) error {
+func postMessage(host, port string, m *pb.CustomerMessage) error {
 	r := &pb.PostMessageRequest{Message: &pb.PostMessageRequest_CustomerMessage{m}}
 
-	conn, err := getConn(port)
+	conn, err := getConn(host, port)
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Panicf("error closing connection: %v", err)
@@ -63,10 +63,10 @@ func postMessage(port string, m *pb.CustomerMessage) error {
 	return err
 }
 
-func getQuestion(port string) error {
+func getQuestion(host, port string) error {
 	r := &pb.GetQuestionRequest{}
 
-	conn, err := getConn(port)
+	conn, err := getConn(host, port)
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Panicf("error closing connection: %v", err)
@@ -89,19 +89,22 @@ func getQuestion(port string) error {
 }
 
 func main() {
-	var port = flag.String("port", defaultPort, "message service port")
+	var host = flag.String("host", defaultHost, "messaging service host")
+	var port = flag.String("port", defaultPort, "messaging service port")
 	flag.Parse()
 
 	question := &pb.CustomerMessage{
 		Body:   "I have a question about this product",
+		Timestamp: time.Now().UnixNano() / 1000000,
 		Sender: &contactpb.Sender{Name: "test1234"},
 	}
 	complaint := &pb.CustomerMessage{
 		Body:   "The knob is too jolly. This does not please me.",
+		Timestamp: time.Now().UnixNano() / 1000000,
 		Sender: &contactpb.Sender{Name: "test1234"},
 	}
 
-	_ = postMessage(*port, question)
-	_ = postMessage(*port, complaint)
-	_ = getQuestion(*port)
+	_ = postMessage(*host, *port, question)
+	_ = postMessage(*host, *port, complaint)
+	_ = getQuestion(*host, *port)
 }

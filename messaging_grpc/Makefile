@@ -10,6 +10,3 @@ run:
 
 build:
 	@$(MAKE) -C $(CURRENT_VERSION) build
-
-test-call:
-	@$(MAKE) -C $(CURRENT_VERSION) test-call
