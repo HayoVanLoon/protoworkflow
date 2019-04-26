@@ -6,17 +6,20 @@ export GOOGLE_CLOUD_PROJECT=bobsknobshop
 # Project Variables
 export PROJECT_ORGANISATION=bobsknobshop
 
-# Expected to be set in personal-envs.sh
+# Expected to be set/overridden in personal-envs.sh
 # Placed here for reference, DO NOT EDIT
 GOOGLE_ACCOUNT=
 GOOGLE_APPLICATION_CREDENTIALS=
-PYTHON27_EXEC=
-PYTHON35P_EXEC=
-VENV_EXEC=
 PROTO_GOOGLE_APIS=
-PROTOC_EXEC=
-DOCKER=
-MAKE=
+GENPROTO_REPO=
+
+# Default executables, override in personal-envs.sh as needed.
+PYTHON27_EXEC="$(which python2.7)"
+PYTHON35P_EXEC="$(which python3.6)"
+VENV_EXEC="$(which virtualenv)"
+PROTOC_EXEC="$(which protoc)"
+DOCKER="$(which docker)"
+MAKE="$(which maker)"
 
 
 if [[ -f personal-envs.sh ]]; then
