@@ -13,11 +13,15 @@
 # limitations under the License.
 
 GOPATH ?= $(HOME)/go
-GO_OUT := $(HOME)/go/src/github.com/HayoVanLoon/protoworkflow-genproto
-GO_OUT2 := $(shell echo $(GO_OUT) | sed 's/\//\\\//g')
+GENPROTO_REPO ?= github.com/HayoVanLoon/protoworkflow-genproto
 
-GO_PROTO_DIRS := $(shell find . -name '*.proto' | sed -E "s/^\.\/(.*)\/.*/$(GO_OUT2)\/\1/" | uniq)
+GO_OUT_ESCAPED := $(shell echo $(GOPATH)/src/$(GENPROTO_REPO) | sed 's/\//\\\//g')
+
+GO_PROTO_DIRS := $(shell find . -name '*.proto' | \
+	sed -E "s/^\.\/(.*)\/.*/$(GO_OUT_ESCAPED)\/\1/" | \
+	uniq)
 PROTO_FILES := $(shell find . -name '*.proto')
+
 
 clean-protoc:
 	rm -rf $(GO_PROTO_DIRS)
