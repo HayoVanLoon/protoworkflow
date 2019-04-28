@@ -82,8 +82,8 @@ spec:
       containers:
         - name: contact
           image: protoworkflow_contact_grpc
-          command: ["/usr/local/bin/app"]
-          args: ["-port", "8080"]
+          command: ["/usr/bin/python3"]
+          args: ["contact_server.py", "--port=8080"]
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
