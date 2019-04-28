@@ -27,5 +27,5 @@ run:
 docker-run:
 	@$(MAKE) -C $(CURRENT_VERSION) docker-run
 
-test-call:
-	@$(MAKE) -C $(CURRENT_VERSION) test-call
+test-minikube:
+	@$(MAKE) -C $(CURRENT_VERSION) test-minikube

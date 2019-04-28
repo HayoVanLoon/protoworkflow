@@ -33,6 +33,8 @@ run-contact:
 docker-run-contact:
 	@$(MAKE) -C contact_grpc docker-run
 
+test-minikube-contact:
+	@$(MAKE) -C contact_grpc test-minikube
 
 # Categorising gRPC Server
 build-categorising:

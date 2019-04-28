@@ -57,9 +57,11 @@ metadata:
 spec:
   selector:
     app: contact
+  type: NodePort
   ports:
     - protocol: TCP
       port: 8080
+      nodePort: 30000
 
 ---
 
@@ -101,7 +103,7 @@ spec:
   ports:
     - protocol: TCP
       port: 8080
-      nodePort: 30000
+      nodePort: 30010
 
 ---
 

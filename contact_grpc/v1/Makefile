@@ -79,5 +79,5 @@ docker-run:
 		--messaging_host=localhost \
 		--messaging_port=8082
 
-test-call:
-	$(VENV); python contact_client.py
+test-minikube:
+	$(VENV); python contact_client.py --host=$(shell minikube ip) --port=30000
