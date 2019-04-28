@@ -26,3 +26,6 @@ run:
 
 docker-run:
 	@$(MAKE) -C $(CURRENT_VERSION) docker-run
+
+test-minikube:
+	@$(MAKE) -C $(CURRENT_VERSION) test-minikube

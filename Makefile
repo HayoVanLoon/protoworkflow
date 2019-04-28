@@ -57,6 +57,8 @@ run-messaging:
 docker-run-messaging:
 	@$(MAKE) -C messaging_grpc docker-run
 
+test-minikube-messaging:
+	@$(MAKE) -C messaging_grpc test-minikube
 
 # Storage gRPC Server
 build-storage:

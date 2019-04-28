@@ -54,6 +54,11 @@ docker-run:
 		-categorising-host=localhost \
 		-categorising-port=8081
 
+test-minikube:
+	go run client/client.go \
+		-host=$(shell minikube ip) \
+		-port=30010
+
 push-gcr:
 	docker tag $(IMAGE_NAME) gcr.io/$(PROJECT_ID)/$(IMAGE_NAME):$(TAG)
 	docker push gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
