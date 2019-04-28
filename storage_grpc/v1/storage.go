@@ -17,6 +17,8 @@
 
 package main
 
+// TODO;BUG: messaging test client returns a complaint, not a question
+
 import (
 	"bytes"
 	"fmt"
@@ -178,12 +180,14 @@ func (s *server) addToIdxs(idx []keyVal, key dkey) {
 		} else {
 			s.data.idxs[kv.k] = map[string][]dkey{kv.v: {key}}
 		}
+		log.Printf("add key %v to index (%v, %v)", key, kv.k, kv.v)
 	}
 }
 
 func insertItem(ks []dkey, key dkey) []dkey {
+	// TODO: use binary search
 	for i, k2 := range ks {
-		if k2 < key {
+		if k2 < key && (i == 0 || ks[i-1] != key) {
 			ks = append(ks, key)
 			copy(ks[:i], ks[:i+1])
 			ks[i] = key
@@ -194,6 +198,7 @@ func insertItem(ks []dkey, key dkey) []dkey {
 }
 
 func removeItem(ks []dkey, key dkey) []dkey {
+	// TODO: use binary search
 	for i, k2 := range ks {
 		if k2 == key {
 			return append(ks[:i], ks[i+1:]...)
@@ -248,6 +253,7 @@ func (s *server) PostObject(_ context.Context, req *pb.PostObjectRequest) (*pb.P
 	if err != nil{
 		return nil, fmt.Errorf("could not store %s", key)
 	}
+	log.Printf("DEBUG: stored %s", key)
 	return &pb.PostObjectResponse{Name: string(key)}, nil
 }
 
@@ -276,14 +282,16 @@ func (s *server) GetObject(_ context.Context, req *pb.GetObjectRequest) (*pb.Get
 		ks = append(ks, toPb(k))
 		ds = append(ds, d)
 	}
+	log.Printf("DEBUG: returned %v objects for query", len(result))
 	return &pb.GetObjectResponse{Keys: ks, Data: ds}, nil
 }
 
 func (s *server) DeleteObject(_ context.Context, req *pb.DeleteObjectRequest) (*empty.Empty, error) {
 	for _, k := range req.Keys {
-		kvs := toKey(k)
-		if _, ok := s.getData(kvs); ok {
-			s.deleteData(kvs)
+		key := toKey(k)
+		if _, ok := s.getData(key); ok {
+			s.deleteData(key)
+			log.Printf("DEBUG: deleted %s", key)
 		}
 	}
 	return &empty.Empty{}, nil
@@ -291,6 +299,11 @@ func (s *server) DeleteObject(_ context.Context, req *pb.DeleteObjectRequest) (*
 
 func (s *server) MutateObject(ctx context.Context, req *pb.MutateObjectRequest) (*pb.MutateObjectResponse, error) {
 	ok, current := s.mutateData(req.GetOldKey(), req.GetNewKey(), req.GetOldData(), req.GetNewData())
+	if ok {
+		log.Printf("DEBUG: updated %s", toKey(req.GetOldKey()))
+	} else {
+		log.Printf("INFO: could not update %s", toKey(req.GetOldKey()))
+	}
 	return &pb.MutateObjectResponse{Success: ok, Current: current}, nil
 }
 
