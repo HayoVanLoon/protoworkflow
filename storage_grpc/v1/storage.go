@@ -47,6 +47,10 @@ type keyVal struct {
 	k, v string
 }
 
+func (kv keyVal) String() string {
+	return fmt.Sprintf("keyVal{%s=%s}", kv.k, kv.v)
+}
+
 // Flattens a pb.Key so it can be used as a data map dkey
 func toKey(k *pb.Key) dkey {
 	if k.GetName() != "" {
@@ -180,7 +184,7 @@ func (s *server) addToIdxs(idx []keyVal, key dkey) {
 		} else {
 			s.data.idxs[kv.k] = map[string][]dkey{kv.v: {key}}
 		}
-		log.Printf("add key %v to index (%v, %v)", key, kv.k, kv.v)
+		log.Printf("DEBUG: added key %v to index (%v, %v)", key, kv.k, kv.v)
 	}
 }
 
@@ -214,6 +218,7 @@ func (s *server) deleteFromIdxs(idx []keyVal, key dkey) {
 			if ks, ok := vs[kv.v]; ok {
 				ks = removeItem(ks, key)
 				s.data.idxs[kv.k][kv.v] = ks
+				log.Printf("DEBUG: deleted key %v from index (%v, %v)", key, kv.k, kv.v)
 			}
 		}
 	}
