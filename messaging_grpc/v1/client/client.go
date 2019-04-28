@@ -100,8 +100,8 @@ func main() {
 	}
 	complaint := &pb.CustomerMessage{
 		Body:   "The knob is too jolly. This does not please me.",
-		Timestamp: time.Now().UnixNano() / 1000000,
-		Sender: &contactpb.Sender{Name: "test1234"},
+		Timestamp: time.Now().UnixNano() / 1000000 + 1,
+		Sender: &contactpb.Sender{Name: "test4321"},
 	}
 
 	_ = postMessage(*host, *port, question)
