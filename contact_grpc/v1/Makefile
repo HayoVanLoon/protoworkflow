@@ -20,6 +20,7 @@ IMAGE_NAME := $(PROJECT_NAME)_$(MODULE_NAME)_grpc
 TAG := latest
 
 # VirtualEnv
+PY != which python3.6
 VENV_DIR := venv
 VENV := . $(VENV_DIR)/bin/activate
 
@@ -34,10 +35,9 @@ PROTO_DEPS := $(PROTO_ROOT)/$(ORGANISATION)/messaging/$(PROTO_VERSION)/*.proto
 PYTHON_OUT := .
 
 
-
 venv:
 	rm -rf $(VENV_DIR)
-	virtualenv -p python3.5 $(VENV_DIR)
+	virtualenv -p $(PY) $(VENV_DIR)
 	$(VENV); pip install -r requirements.txt
 
 dev-env: venv
