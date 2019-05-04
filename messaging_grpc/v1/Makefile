@@ -34,11 +34,14 @@ MOCK_TARGET := $(TEST_ROOT)/$(PACKAGE_DIR)/$(MODULE_NAME)_mock.go
 protoc:
 	@echo Go App, skipped
 
+test:
+	@echo TODO
+
 build:
 	docker build -t $(IMAGE_NAME) .
 
 run:
-	go build messaging.go \
+	go run messaging.go \
 		-port=8082 \
 		-storage-host=localhost \
 		-storage-port=8080 \

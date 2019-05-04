@@ -18,6 +18,9 @@ CURRENT_VERSION := v1
 protoc:
 	@$(MAKE) -C v1 protoc
 
+test:
+	@$(MAKE) -C v1 test
+
 build:
 	@$(MAKE) -C $(CURRENT_VERSION) build
 

@@ -34,11 +34,14 @@ MOCK_TARGET := $(TEST_ROOT)/$(PACKAGE_DIR)/$(MODULE_NAME)_mock.go
 protoc:
 	@echo Go App, skipped
 
+test:
+	@echo TODO
+
 build:
 	docker build -t $(IMAGE_NAME) .
 
 run:
-	go build categorising.go
+	go run categorising.go
 
 docker-run:
 	docker run --network="host" $(IMAGE_NAME) \

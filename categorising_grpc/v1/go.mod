@@ -1,4 +1,4 @@
-module github.com/HayoVanLoon/protoworkflow-categorising-grpc-v1
+module github.com/HayoVanLoon/protoworkflow/categorising_grpc/v1
 
 go 1.12
 

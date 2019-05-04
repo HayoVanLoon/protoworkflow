@@ -17,11 +17,10 @@
 
 package main
 
-// TODO;BUG: messaging test client returns a complaint, not a question
-
 import (
 	"bytes"
 	"fmt"
+	"github.com/HayoVanLoon/go-commons/sorted"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
@@ -65,15 +64,19 @@ func toKey(k *pb.Key) dkey {
 }
 
 // Turns indexed values into an index map
-func toIdx(k *pb.Key) []keyVal {
+func toIdx(k *pb.Key, query bool) []keyVal {
 	var result []keyVal
 	for _, p := range k.Parts {
 		result = append(result, keyVal{p.Key, p.Value})
-		result = append(result, keyVal{p.Key, wildcard})
+		if !query {
+			result = append(result, keyVal{p.Key, wildcard})
+		}
 	}
 	for _, p := range k.IndexedValues {
 		result = append(result, keyVal{p.Key, p.Value})
-		result = append(result, keyVal{p.Key, wildcard})
+		if !query {
+			result = append(result, keyVal{p.Key, wildcard})
+		}
 	}
 	return result
 }
@@ -96,7 +99,7 @@ type item struct {
 
 type dataMap struct {
 	sync.RWMutex
-	idxs  map[string]map[string][]dkey
+	idxs  map[string]map[string]sorted.StringSet
 	items map[dkey]item
 }
 
@@ -105,7 +108,10 @@ type server struct {
 }
 
 func newServer() *server {
-	dataMap := dataMap{idxs: make(map[string]map[string][]dkey), items: make(map[dkey]item)}
+	dataMap := dataMap{
+		idxs: make(map[string]map[string]sorted.StringSet),
+		items: make(map[dkey]item),
+	}
 	return &server{dataMap}
 }
 
@@ -118,37 +124,38 @@ func (s *server) getData(key dkey) ([]byte, bool) {
 	return nil, false
 }
 
-func (s *server) getKeys(query []keyVal) []dkey {
+func (s *server) getKeys(query []keyVal) []string {
 	s.data.RLock()
 	defer s.data.RUnlock()
 
-	var result []dkey
-	for _, kv := range query {
-		if vs, ok := s.data.idxs[kv.k]; ok {
-			if ks, ok := vs[kv.v]; ok {
-				if result == nil {
-					result = ks
+	var left []string
+	for _, queryKv := range query {
+		if vs, ok := s.data.idxs[queryKv.k]; ok {
+			if ks, ok := vs[queryKv.v]; ok {
+				if left == nil {
+					left = ks.Slice()
 				} else {
 					i, j := 0, 0
-					var newR []dkey
-					for ; i < len(ks) && j < len(result); {
-						if result[j] > ks[i] {
-							i += 1
-						} else if result[j] < ks[i] {
+					right := ks.Slice()
+					var intersect []string
+					for ; i < len(left) && j < len(right); {
+						if left[i] > right[i] {
 							j += 1
+						} else if left[j] < right[i] {
+							i += 1
 						} else {
-							newR = append(newR, result[j])
+							intersect = append(intersect, left[j])
 							i += 1
 							j += 1
 						}
 					}
-					result = newR
+					left = intersect
 				}
 			}
 		}
 	}
 
-	return result
+	return left
 }
 
 func (s *server) putData(key dkey, idx []keyVal, d []byte) (dkey, error) {
@@ -174,41 +181,18 @@ func (s *server) addToIdxs(idx []keyVal, key dkey) {
 	for _, kv := range idx {
 		if vs, ok := s.data.idxs[kv.k]; ok {
 			if ks, ok := vs[kv.v]; ok {
-				// insert dkey into a sorted array
-				ks = insertItem(ks, key)
+				ks = ks.Add(string(key))
 				s.data.idxs[kv.k][kv.v]= ks
 			} else {
-				vs[kv.v] = []dkey{key}
+				vs[kv.v] = sorted.NewStringSet().Add(string(key))
 				s.data.idxs[kv.k] = vs
 			}
 		} else {
-			s.data.idxs[kv.k] = map[string][]dkey{kv.v: {key}}
+			newVs := sorted.NewStringSet().Add(string(key))
+			s.data.idxs[kv.k] = map[string]sorted.StringSet{kv.v: newVs}
 		}
 		log.Printf("DEBUG: added key %v to index (%v, %v)", key, kv.k, kv.v)
 	}
-}
-
-func insertItem(ks []dkey, key dkey) []dkey {
-	// TODO: use binary search
-	for i, k2 := range ks {
-		if k2 < key && (i == 0 || ks[i-1] != key) {
-			ks = append(ks, key)
-			copy(ks[:i], ks[:i+1])
-			ks[i] = key
-			break
-		}
-	}
-	return ks
-}
-
-func removeItem(ks []dkey, key dkey) []dkey {
-	// TODO: use binary search
-	for i, k2 := range ks {
-		if k2 == key {
-			return append(ks[:i], ks[i+1:]...)
-		}
-	}
-	return ks
 }
 
 // MUST be under mutex!
@@ -216,7 +200,7 @@ func (s *server) deleteFromIdxs(idx []keyVal, key dkey) {
 	for _, kv := range idx {
 		if vs, ok := s.data.idxs[kv.k]; ok {
 			if ks, ok := vs[kv.v]; ok {
-				ks = removeItem(ks, key)
+				ks.Remove(string(key))
 				s.data.idxs[kv.k][kv.v] = ks
 				log.Printf("DEBUG: deleted key %v from index (%v, %v)", key, kv.k, kv.v)
 			}
@@ -240,10 +224,10 @@ func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bo
 	key := toKey(oldKey)
 	if it, ok := s.data.items[key]; ok {
 		if bytes.Equal(it.data, oldData) {
-			newIt := item{idx: toIdx(newKey), data: newData}
+			newIt := item{idx: toIdx(newKey, false), data: newData}
 			s.data.items[key] = newIt
-			s.deleteFromIdxs(toIdx(oldKey), key)
-			s.addToIdxs(toIdx(newKey), key)
+			s.deleteFromIdxs(toIdx(oldKey, false), key)
+			s.addToIdxs(toIdx(newKey, false), key)
 			return true, nil
 		} else {
 			return false, it.data
@@ -254,7 +238,7 @@ func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bo
 }
 
 func (s *server) PostObject(_ context.Context, req *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
-	key, err := s.putData(toKey(req.Key), toIdx(req.Key), req.Data)
+	key, err := s.putData(toKey(req.Key), toIdx(req.Key, false), req.Data)
 	if err != nil{
 		return nil, fmt.Errorf("could not store %s", key)
 	}
@@ -271,13 +255,17 @@ func (s *server) GetObject(_ context.Context, req *pb.GetObjectRequest) (*pb.Get
 		if d, ok := s.getData(asKey); ok {
 			// if dkey matches completely, there are no wildcards
 			result[asKey] = d
-		} else {
-			query := toIdx(k)
+		} else if len(k.Parts) > 0 {
+			query := toIdx(k, true)
 			for _, k2 := range s.getKeys(query) {
-				if d, ok = s.getData(k2); ok {
-					result[k2] = d
+				if d, ok = s.getData(dkey(k2)); ok {
+					result[dkey(k2)] = d
 				}
 			}
+		} else {
+			m := fmt.Sprintf("empty query")
+			log.Print(m)
+			return nil, fmt.Errorf(m)
 		}
 	}
 

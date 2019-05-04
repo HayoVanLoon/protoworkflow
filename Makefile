@@ -16,7 +16,13 @@ protoc:
 	$(MAKE) -C proto protoc-go
 	$(MAKE) -C contact_grpc protoc
 
-build:
+test: protoc
+	$(MAKE) -C categorising_grpc test
+	$(MAKE) -C contact_grpc test
+	$(MAKE) -C messaging_grpc test
+	$(MAKE) -C storage_grpc test
+
+build: test
 	$(MAKE) -C categorising_grpc build
 	$(MAKE) -C contact_grpc build
 	$(MAKE) -C messaging_grpc build

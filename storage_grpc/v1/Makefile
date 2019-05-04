@@ -34,11 +34,14 @@ MOCK_TARGET := $(TEST_ROOT)/$(PACKAGE_DIR)/$(MODULE_NAME)_mock.go
 protoc:
 	@echo Go App, skipped
 
+test:
+	go test .
+
 build:
 	docker build -t $(IMAGE_NAME) .
 
 run:
-	go build categorising.go
+	go run storage.go
 
 docker-run:
 	docker run --network="host" $(IMAGE_NAME) \
@@ -49,15 +52,5 @@ push-gcr:
 	docker tag $(IMAGE_NAME) gcr.io/$(PROJECT_ID)/$(IMAGE_NAME):$(TAG)
 	docker push gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
 
-#
 #mocks:
-#	mkdir -p "$(TEST_ROOT)/$(ENVY_OUT)"
-#	rm "$(MOCK_TARGET)"
-#	mockgen -source envy/v1/envy.pb.go >> "$(MOCK_TARGET)"
-#
-#build:
-#	$(go) build -i -o /dist/Envy_Server github.com/HayoVanLoon/envy/envy_server
-#
-#test-client: protoc
-#	$(GO) build -i -o /tmp/___Envy_Client github.com/HayoVanLoon/envy/envy_client #gosetup
-#	/tmp/___Envy_Client #gosetup
+#	mockgen -source $(GOPATH)/src/$(GENPROTO_REPO)/$(PACKAGE_DIR)/storage.pb.go

@@ -63,11 +63,12 @@ else
 		$(PROTO_DEPS)
 endif
 
+test: clean protoc
+#	$(VENV); pytest
+	@echo TODO
+
 build:
 	docker build -t $(IMAGE_NAME) .
-
-test: clean protoc
-	$(VENV); pytest
 
 run:
 	$(VENV); python contact_server.py
