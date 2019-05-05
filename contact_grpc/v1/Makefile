@@ -30,8 +30,8 @@ MODULE := $(MODULE_NAME)
 PROTO_VERSION := v1
 PACKAGE_DIR := $(ORGANISATION)/$(MODULE)/$(PROTO_VERSION)
 PROTO_ROOT := ../../proto
+# Protocol Buffer Variables (module)
 PROTO_DEPS := $(PROTO_ROOT)/$(ORGANISATION)/messaging/$(PROTO_VERSION)/*.proto
-# Protocol Buffer Variables (Python)
 PYTHON_OUT := .
 
 
