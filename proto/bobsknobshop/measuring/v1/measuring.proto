@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package bobsknobshop.measuring.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/any.proto";
+
+option java_multiple_files = true;
+option java_package = "gl.bobsknobshop.measuring.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/measuring/v1;measuring";
+
+// A Service for pushing measurements into BigQuery
+service Measuring {
+
+    // Posts a service call (its request and response) to BigQuery
+    rpc PostServiceCall(PostServiceCallRequest) returns (PostServiceCallResponse) {
+    }
+}
+
+message PostServiceCallRequest {
+
+    // Name of the service called.
+    string service_name = 1;
+
+    // Name of the rpc called.
+    // Optional if a service only has one RPC.
+    string rpc_name = 2;
+    google.protobuf.Any request = 3;
+    google.protobuf.Any response = 4;
+}
+
+message PostServiceCallResponse {
+}
