@@ -19,6 +19,8 @@
 
 package gl.bobsknobshop.measuring;
 
+import com.google.protobuf.Any;
+import gl.bobsknobshop.contact.v1.PostMessageRequest;
 import gl.bobsknobshop.measuring.v1.MeasuringGrpc;
 import gl.bobsknobshop.measuring.v1.PostServiceCallRequest;
 import gl.bobsknobshop.measuring.v1.PostServiceCallResponse;
@@ -62,7 +64,14 @@ public class TestClient {
   }
 
   private static PostServiceCallRequest createRequest() {
-    throw new UnsupportedOperationException();
+    final PostServiceCallRequest request = PostServiceCallRequest.newBuilder()
+        .setServiceName("messaging")
+        .setRpcName("postmessage")
+        .setRequest(Any.newBuilder().build())
+        .setResponse(Any.newBuilder().build())
+        .build();
+
+    return request;
   }
 
 

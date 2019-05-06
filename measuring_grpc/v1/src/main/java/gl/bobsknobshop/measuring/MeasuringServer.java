@@ -32,9 +32,12 @@ import java.util.logging.Logger;
 
 public class MeasuringServer {
 
+  private static final Logger LOG = Logger.getLogger(
+      MeasuringServer.class.getName());
+
+  /** Default listening port */
   static final int DEFAULT_PORT = 8080;
-  private static final Logger LOG =
-      Logger.getLogger(MeasuringServer.class.getName());
+
   private final int port;
   private Server server;
 
@@ -99,14 +102,13 @@ public class MeasuringServer {
   }
 
 
-  static class MeasuringImpl
-      extends MeasuringGrpc.MeasuringImplBase {
+  static class MeasuringImpl extends MeasuringGrpc.MeasuringImplBase {
 
     @Override
     public void postServiceCall(PostServiceCallRequest request,
                                 StreamObserver<PostServiceCallResponse> responseObserver) {
 
-      LOG.info("received a request");
+      LOG.info("Received a PostServiceCall request " + request);
 
       final PostServiceCallResponse.Builder resp =
           PostServiceCallResponse.newBuilder();

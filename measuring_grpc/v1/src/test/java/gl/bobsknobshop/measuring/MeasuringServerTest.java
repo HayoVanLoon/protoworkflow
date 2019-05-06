@@ -65,6 +65,6 @@ public class MeasuringServerTest {
 
     PostServiceCallResponse response = blockingStub.postServiceCall(request);
 
-    Assert.assertEquals(15, 15);
+    Assert.assertEquals(PostServiceCallResponse.newBuilder().build(), response);
   }
 }
