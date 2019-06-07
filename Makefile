@@ -22,11 +22,7 @@ test: protoc
 	$(MAKE) -C messaging_grpc test
 	$(MAKE) -C storage_grpc test
 
-build: test
-	$(MAKE) -C categorising_grpc build
-	$(MAKE) -C contact_grpc build
-	$(MAKE) -C messaging_grpc build
-	$(MAKE) -C storage_grpc build
+build: test build-categorising build-contact build-messaging build-storage
 
 
 # Contact gRPC Server
