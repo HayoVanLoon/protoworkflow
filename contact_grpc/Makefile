@@ -16,10 +16,10 @@ CURRENT_VERSION := v1
 
 
 protoc:
-	@$(MAKE) -C v1 protoc
+	@$(MAKE) -C $(CURRENT_VERSION) protoc
 
 test:
-	@$(MAKE) -C v1 test
+	@$(MAKE) -C $(CURRENT_VERSION) test
 
 build:
 	@$(MAKE) -C $(CURRENT_VERSION) build
