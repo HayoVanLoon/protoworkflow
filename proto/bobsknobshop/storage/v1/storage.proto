@@ -32,7 +32,7 @@ service Storage {
 
     // Stores data by a given key.
     // If data is already stored by the given key, nothing happens.
-    rpc PostObject(PostObjectRequest) returns (PostObjectResponse) {
+    rpc CreateObject(CreateObjectRequest) returns (CreateObjectResponse) {
     }
 
     // Retrieves one or more data by key(s).
@@ -52,7 +52,7 @@ service Storage {
 }
 
 
-message PostObjectRequest {
+message CreateObjectRequest {
 
     // Key to store data by.
     Key key = 1;
@@ -62,10 +62,12 @@ message PostObjectRequest {
 }
 
 
-message PostObjectResponse {
+message CreateObjectResponse {
 
     // Name by which object is stored.
     string name = 1;
+
+    string etag = 2;
 }
 
 
@@ -104,14 +106,14 @@ message DeleteObjectRequest {
 message MutateObjectRequest {
     Key old_key = 1;
     Key new_key = 2;
-    bytes old_data = 3;
+    string old_etag = 3;
     bytes new_data = 4;
 }
 
 
 message MutateObjectResponse {
     bool success = 1;
-    bytes current = 2;
+    string new_etag = 2;
 }
 
 

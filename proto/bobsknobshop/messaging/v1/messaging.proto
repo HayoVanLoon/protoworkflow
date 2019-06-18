@@ -34,37 +34,37 @@ service Messaging {
 
     // Stores a new message.
     // The message status will be TO_DO.
-    rpc PostMessage(PostMessageRequest) returns (PostMessageResponse) {
+    rpc CreateMessage(CreateMessageRequest) returns (CustomerMessage) {
     }
 
     // Retrieves an open question.
     // The message status will be set to IN_PROCESS.
-    rpc GetQuestion(GetQuestionRequest) returns (GetQuestionResponse) {
+    rpc GetQuestion(GetQuestionRequest) returns (CustomerMessage) {
     }
 
     // Retrieves an open complaint.
     // The message status will be set to IN_PROCESS.
-    rpc GetComplaint(GetComplaintRequest) returns (GetComplaintResponse) {
+    rpc GetComplaint(GetComplaintRequest) returns (CustomerMessage) {
     }
 
     // Retrieves an open feedback message.
     // The message status will be set to IN_PROCESS.
-    rpc GetFeedback(GetFeedbackRequest) returns (GetFeedbackResponse) {
+    rpc GetFeedback(GetFeedbackRequest) returns (CustomerMessage) {
     }
 
     // Moves a message to a different category.
     // The message status will be reset to TO_DO.
-    rpc MoveMessage(MoveMessageRequest) returns (MoveMessageResponse) {
+    rpc MoveMessage(MoveMessageRequest) returns (CustomerMessage) {
     }
 
     // Updates a message status.
     // If the message does not exist (because it was removed), this action will
     // fail.
-    rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse) {
+    rpc UpdateStatus(UpdateStatusRequest) returns (CustomerMessage) {
     }
 
     // Retrieves a message by its name.
-    rpc GetMessage(GetMessageRequest) returns (GetMessageResponse) {
+    rpc GetMessage(GetMessageRequest) returns (CustomerMessage) {
     }
 
     // Searches for messages matching the query.
@@ -78,19 +78,10 @@ service Messaging {
 }
 
 
-message PostMessageRequest {
+message CreateMessageRequest {
 
     oneof message {
         // A message sent by a customer.
-        CustomerMessage customer_message = 1;
-    }
-}
-
-
-message PostMessageResponse {
-
-    // The newly stored message.
-    oneof message {
         CustomerMessage customer_message = 1;
     }
 }
@@ -113,26 +104,9 @@ message GetComplaintRequest {
 }
 
 
-message GetComplaintResponse {
-
-    // An unprocessed complaint.
-    oneof message {
-        CustomerMessage customer_message = 1;
-    }
-}
-
-
 message GetFeedbackRequest {
 }
 
-
-message GetFeedbackResponse {
-
-    // An unprocessed feedback message.
-    oneof message {
-        CustomerMessage customer_message = 1;
-    }
-}
 
 
 message MoveMessageRequest {
@@ -149,15 +123,6 @@ message MoveMessageRequest {
 }
 
 
-message MoveMessageResponse {
-
-    // The message after being moved to a new category.
-    oneof message {
-        CustomerMessage customer_message = 1;
-    }
-}
-
-
 message UpdateStatusRequest {
 
     // The message to update the status for.
@@ -171,27 +136,11 @@ message UpdateStatusRequest {
 }
 
 
-message UpdateStatusResponse {
-
-    // The updated message.
-    oneof message {
-        CustomerMessage customer_message = 1;
-    }
-}
-
 
 message GetMessageRequest {
     string name = 1;
 }
 
-
-message GetMessageResponse {
-
-    oneof message {
-        // A message sent by a customer.
-        CustomerMessage customer_message = 1;
-    }
-}
 
 
 // A message for searching messages using a query.

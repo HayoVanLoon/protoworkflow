@@ -18,7 +18,7 @@
 package main
 
 import (
-	"bytes"
+	"crypto/sha1"
 	"fmt"
 	"github.com/HayoVanLoon/go-commons/sorted"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
@@ -217,33 +217,39 @@ func (s *server) deleteData(key dkey) {
 	}
 }
 
-func (s *server) mutateData(oldKey, newKey *pb.Key, oldData, newData []byte) (bool, []byte) {
+func getEtag(data []byte) string {
+	h := sha1.New()
+	bs := h.Sum(data)
+	return fmt.Sprintf("%x", bs)
+}
+
+func (s *server) mutateData(oldKey, newKey *pb.Key, oldEtag string, newData []byte) (bool, string) {
 	s.data.Lock()
 	defer s.data.Unlock()
 
 	key := toKey(oldKey)
 	if it, ok := s.data.items[key]; ok {
-		if bytes.Equal(it.data, oldData) {
+		if curEtag := getEtag(it.data); curEtag == oldEtag {
 			newIt := item{idx: toIdx(newKey, false), data: newData}
 			s.data.items[key] = newIt
 			s.deleteFromIdxs(toIdx(oldKey, false), key)
 			s.addToIdxs(toIdx(newKey, false), key)
-			return true, nil
+			return true, ""
 		} else {
-			return false, it.data
+			return false, getEtag(it.data)
 		}
 	} else {
-		return false, nil
+		return false, ""
 	}
 }
 
-func (s *server) PostObject(_ context.Context, req *pb.PostObjectRequest) (*pb.PostObjectResponse, error) {
+func (s *server) CreateObject(_ context.Context, req *pb.CreateObjectRequest) (*pb.CreateObjectResponse, error) {
 	key, err := s.putData(toKey(req.Key), toIdx(req.Key, false), req.Data)
 	if err != nil{
 		return nil, fmt.Errorf("could not store %s", key)
 	}
 	log.Printf("DEBUG: stored %s", key)
-	return &pb.PostObjectResponse{Name: string(key)}, nil
+	return &pb.CreateObjectResponse{Name: string(key)}, nil
 }
 
 func (s *server) GetObject(_ context.Context, req *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {
@@ -291,13 +297,13 @@ func (s *server) DeleteObject(_ context.Context, req *pb.DeleteObjectRequest) (*
 }
 
 func (s *server) MutateObject(ctx context.Context, req *pb.MutateObjectRequest) (*pb.MutateObjectResponse, error) {
-	ok, current := s.mutateData(req.GetOldKey(), req.GetNewKey(), req.GetOldData(), req.GetNewData())
+	ok, etag := s.mutateData(req.GetOldKey(), req.GetNewKey(), req.GetOldEtag(), req.GetNewData())
 	if ok {
 		log.Printf("DEBUG: updated %s", toKey(req.GetOldKey()))
 	} else {
 		log.Printf("INFO: could not update %s", toKey(req.GetOldKey()))
 	}
-	return &pb.MutateObjectResponse{Success: ok, Current: current}, nil
+	return &pb.MutateObjectResponse{Success: ok, NewEtag: etag}, nil
 }
 
 func main() {

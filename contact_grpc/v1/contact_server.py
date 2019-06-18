@@ -38,7 +38,7 @@ class ContactServer(contact_pb2_grpc.ContactServicer):
         super(ContactServer, self).__init__()
         self.messaging_target = messaging_host + ':' + str(messaging_port)
 
-    def PostMessage(self, request, context):
+    def CreateMessage(self, request, context):
         message_req = messaging_pb2.PostMessageRequest()
         message_req.customer_message.body = request.message
         message_req.customer_message.sender.name = 'foo_name'

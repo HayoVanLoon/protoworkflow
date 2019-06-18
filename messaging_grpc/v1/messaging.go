@@ -115,32 +115,32 @@ func (s server) getCategory(m *pb.CustomerMessage) (cat pb.MessageCategory, err 
 	return
 }
 
-func (s server) storeMessage(m *pb.CustomerMessage) (string, error) {
+func (s server) storeMessage(m *pb.CustomerMessage) (string, string, error) {
 	key := createKey(m)
 
 	data, _ := proto.Marshal(m)
-	r := &storagepb.PostObjectRequest{Key: key, Data: data}
+	r := &storagepb.CreateObjectRequest{Key: key, Data: data}
 
 	c, closeConn, err := s.getStorageClient()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer closeConn()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := c.PostObject(ctx, r)
+	resp, err := c.CreateObject(ctx, r)
 	if err != nil {
 		log.Printf("WARN: storing message: %v", err)
-		return "", err
+		return "", "", err
 	} else if resp.GetName() != "" {
 		log.Printf("DEBUG: stored message %v", m.Body)
 	} else {
 		log.Printf("WARN: message already stored %v", m.Body)
 	}
 
-	return resp.GetName(), err
+	return resp.GetName(), resp.GetEtag(), err
 }
 
 func (s server) getMessages(cat pb.MessageCategory, st pb.Status, l int32) (msgs []*pb.CustomerMessage, err error) {
@@ -181,9 +181,8 @@ func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) (bool, error) {
 	oldKey := createKey(oldM)
 	newKey := createKey(newM)
 
-	oldData, _ := proto.Marshal(oldM)
 	newData, _ := proto.Marshal(newM)
-	r := &storagepb.MutateObjectRequest{OldKey: oldKey, NewKey: newKey, OldData: oldData, NewData: newData}
+	r := &storagepb.MutateObjectRequest{OldKey: oldKey, NewKey: newKey, OldEtag: oldM.GetEtag(), NewData: newData}
 
 	c, closeConn, err := s.getStorageClient()
 	if err != nil {
@@ -207,7 +206,7 @@ func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) (bool, error) {
 	return resp.Success, err
 }
 
-func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp *pb.PostMessageResponse, err error) {
+func (s server) CreateMessage(ctx context.Context, r *pb.CreateMessageRequest) (resp *pb.CustomerMessage, err error) {
 	m := r.GetCustomerMessage()
 	m.Status = pb.Status_TO_DO
 
@@ -223,20 +222,21 @@ func (s server) PostMessage(ctx context.Context, r *pb.PostMessageRequest) (resp
 	m.Category = cat
 
 	// store message
-	var name string
+	var name, etag string
 	for i := -1; (err != nil || i < 0) && i < maxRetries; i += 1 {
-		name, err = s.storeMessage(m)
+		name, etag, err = s.storeMessage(m)
 	}
 	if err != nil {
 		log.Printf("ERROR: error while storing message: %s", err)
 		return
 	} else if name == "" {
 		log.Printf("WARN: could not store message: %s", m.Body)
-		return &pb.PostMessageResponse{}, nil
+		return nil, nil
 	}
 
 	m.Name = name
-	return &pb.PostMessageResponse{Message: &pb.PostMessageResponse_CustomerMessage{m}}, nil
+	m.Etag = etag
+	return m, nil
 }
 
 // Claims a message.
@@ -253,7 +253,7 @@ func (s server) claimFirst(msgs []*pb.CustomerMessage) (m *pb.CustomerMessage, e
 	return
 }
 
-func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.GetQuestionResponse, err error) {
+func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.CustomerMessage, err error) {
 	for {
 		msgs, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO, messageLimit)
 		if err != nil {
@@ -269,16 +269,14 @@ func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.G
 			log.Printf("WARN: error getting question: %s", err)
 			return nil, err
 		} else {
-			return &pb.GetQuestionResponse{
-				Message: &pb.GetQuestionResponse_CustomerMessage{m},
-			}, err
+			return m, err
 		}
 	}
 
-	return &pb.GetQuestionResponse{}, nil
+	return nil, nil
 }
 
-func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.GetComplaintResponse, error) {
+func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.CustomerMessage, error) {
 	for {
 		msgs, err := s.getMessages(pb.MessageCategory_COMPLAINT, pb.Status_TO_DO, messageLimit)
 		if err != nil {
@@ -294,16 +292,14 @@ func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.GetC
 			log.Printf("WARN: error getting question: %s", err)
 			return nil, err
 		} else {
-			return &pb.GetComplaintResponse{
-				Message: &pb.GetComplaintResponse_CustomerMessage{m},
-			}, err
+			return m, err
 		}
 	}
 
-	return &pb.GetComplaintResponse{}, nil
+	return nil, nil
 }
 
-func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.GetFeedbackResponse, err error) {
+func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.CustomerMessage, err error) {
 	for {
 		msgs, err := s.getMessages(pb.MessageCategory_FEEDBACK, pb.Status_TO_DO, messageLimit)
 		if err != nil {
@@ -319,24 +315,22 @@ func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.G
 			log.Printf("WARN: error getting question: %s", err)
 			return nil, err
 		} else {
-			return &pb.GetFeedbackResponse{
-				Message: &pb.GetFeedbackResponse_CustomerMessage{m},
-			}, err
+			return m, err
 		}
 	}
 
-	return &pb.GetFeedbackResponse{}, nil
+	return nil, nil
 }
 
-func (server) MoveMessage(context.Context, *pb.MoveMessageRequest) (*pb.MoveMessageResponse, error) {
+func (server) MoveMessage(context.Context, *pb.MoveMessageRequest) (*pb.CustomerMessage, error) {
 	panic("implement me")
 }
 
-func (server) UpdateStatus(context.Context, *pb.UpdateStatusRequest) (*pb.UpdateStatusResponse, error) {
+func (server) UpdateStatus(context.Context, *pb.UpdateStatusRequest) (*pb.CustomerMessage, error) {
 	panic("implement me")
 }
 
-func (s server) GetMessage(_ context.Context, req *pb.GetMessageRequest) (*pb.GetMessageResponse, error) {
+func (s server) GetMessage(_ context.Context, req *pb.GetMessageRequest) (*pb.CustomerMessage, error) {
 	c, closeConn, err := s.getStorageClient()
 	if err != nil {
 		return nil, err
@@ -362,7 +356,7 @@ func (s server) GetMessage(_ context.Context, req *pb.GetMessageRequest) (*pb.Ge
 		return nil, err
 	}
 
-	return &pb.GetMessageResponse{Message: &pb.GetMessageResponse_CustomerMessage{m}}, nil
+	return m, nil
 }
 
 func (server) SearchMessages(context.Context, *pb.SearchMessagesRequest) (*pb.SearchMessagesResponse, error) {

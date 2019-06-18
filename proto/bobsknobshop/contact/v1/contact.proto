@@ -20,6 +20,7 @@ syntax = "proto3";
 package bobsknobshop.contact.v1;
 
 import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
 import "bobsknobshop/contact/v1/objects.proto";
 
 option java_multiple_files = true;
@@ -31,12 +32,12 @@ option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/
 service Contact {
 
     // Stores a new message.
-    rpc PostMessage(PostMessageRequest) returns (PostMessageResponse) {
+    rpc CreateMessage(CreateMessageRequest) returns (google.protobuf.Empty) {
     }
 }
 
 
-message PostMessageRequest {
+message CreateMessageRequest {
 
     // The message text.
     string message = 1;
@@ -46,8 +47,4 @@ message PostMessageRequest {
 
     // The product id (optional).
     string product_id = 3;
-}
-
-
-message PostMessageResponse {
 }

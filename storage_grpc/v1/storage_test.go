@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	postMessage1 = &pb.PostObjectRequest{
+	postMessage1 = &pb.CreateObjectRequest{
 		Key: &pb.Key{
 			Parts: []*pb.Key_Part{
 				{Key: "foo", Value: "123"}, {Key: "bar", Value: "456"},
@@ -18,10 +18,10 @@ var (
 		},
 		Data: []byte("post message 1"),
 	}
-	postMessageResp1 = &pb.PostObjectResponse{
+	postMessageResp1 = &pb.CreateObjectResponse{
 		Name: "foo=123~bar=456",
 	}
-	postMessage2 = &pb.PostObjectRequest{
+	postMessage2 = &pb.CreateObjectRequest{
 		Key: &pb.Key{
 			Parts: []*pb.Key_Part{
 				{Key: "foo", Value: "123"}, {Key: "bar", Value: "654"},
@@ -32,7 +32,7 @@ var (
 		},
 		Data: []byte("post message 2"),
 	}
-	postMessage3 = &pb.PostObjectRequest{
+	postMessage3 = &pb.CreateObjectRequest{
 		Key: &pb.Key{
 			Parts: []*pb.Key_Part{
 				{Key: "foo", Value: "321"}, {Key: "bar", Value: "456"},
@@ -45,8 +45,8 @@ var (
 	}
 )
 
-func createPostMessageResponse(name string) *pb.PostObjectResponse {
-	return &pb.PostObjectResponse{
+func createPostMessageResponse(name string) *pb.CreateObjectResponse {
+	return &pb.CreateObjectResponse{
 		Name: name,
 	}
 }
@@ -67,7 +67,7 @@ func createGetObjectQueryReq(keyParts []*pb.Key_Part) *pb.GetObjectRequest {
 func TestServer_PostObject_GetObject(t *testing.T) {
 	cases := []struct {
 		s    *server
-		req  *pb.PostObjectRequest
+		req  *pb.CreateObjectRequest
 		name string
 		data string
 	}{
@@ -77,7 +77,7 @@ func TestServer_PostObject_GetObject(t *testing.T) {
 	}
 	for i, c := range cases {
 		expected_resp := createPostMessageResponse(c.name)
-		if resp, _ := c.s.PostObject(nil, c.req); !reflect.DeepEqual(resp, expected_resp) {
+		if resp, _ := c.s.CreateObject(nil, c.req); !reflect.DeepEqual(resp, expected_resp) {
 			t.Errorf("case %v failed", i)
 		}
 
@@ -90,9 +90,9 @@ func TestServer_PostObject_GetObject(t *testing.T) {
 
 func TestServer_Indexing(t *testing.T) {
 	s := newServer()
-	s.PostObject(nil, postMessage1)
-	s.PostObject(nil, postMessage2)
-	s.PostObject(nil, postMessage3)
+	_, _ = s.CreateObject(nil, postMessage1)
+	_, _ = s.CreateObject(nil, postMessage2)
+	_, _ = s.CreateObject(nil, postMessage3)
 
 	cases := []struct {
 		query *pb.GetObjectRequest
@@ -126,9 +126,11 @@ func TestServer_Indexing(t *testing.T) {
 			if err == nil {
 				t.Errorf("case %v: expected failure", i)
 			}
+		} else if err != nil{
+			t.Errorf("unexpected error: %v", err)
 		} else {
 
-			if len(resp.Data) != len(c.dataz) {
+			if len(resp.GetData()) != len(c.dataz) {
 				t.Errorf("case %v: response count mismatch %v <> %v", i, len(resp.Data), len(c.dataz))
 			}
 			for _, left := range c.dataz {

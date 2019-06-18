@@ -13,11 +13,11 @@ option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/
 service Measuring {
 
     // Posts a service call (its request and response) to BigQuery
-    rpc PostServiceCall(PostServiceCallRequest) returns (PostServiceCallResponse) {
+    rpc CreateServiceCall (CreateServiceCallRequest) returns (CreateServiceCallResponse) {
     }
 }
 
-message PostServiceCallRequest {
+message CreateServiceCallRequest {
 
     // Name of the service called.
     string service_name = 1;
@@ -29,5 +29,5 @@ message PostServiceCallRequest {
     google.protobuf.Any response = 4;
 }
 
-message PostServiceCallResponse {
+message CreateServiceCallResponse {
 }

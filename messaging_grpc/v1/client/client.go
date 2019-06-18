@@ -42,7 +42,7 @@ func getConn(host, port string) (*grpc.ClientConn, error) {
 }
 
 func postMessage(host, port string, m *pb.CustomerMessage) error {
-	r := &pb.PostMessageRequest{Message: &pb.PostMessageRequest_CustomerMessage{m}}
+	r := &pb.CreateMessageRequest{Message: &pb.CreateMessageRequest_CustomerMessage{m}}
 
 	conn, err := getConn(host, port)
 	defer func() {
@@ -56,7 +56,7 @@ func postMessage(host, port string, m *pb.CustomerMessage) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := c.PostMessage(ctx, r)
+	resp, err := c.CreateMessage(ctx, r)
 
 	log.Printf("%v\n", resp)
 

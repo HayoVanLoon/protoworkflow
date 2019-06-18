@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 // indirect
 	github.com/HayoVanLoon/go-commons v0.0.0-20190504135409-6a681c7497de
-	github.com/HayoVanLoon/protoworkflow-genproto v0.0.0-20190417145849-23ba65f9550b
+	github.com/HayoVanLoon/protoworkflow-genproto v0.0.0-20190618135346-ed3f6cd1fbce
 	github.com/aclements/go-gg v0.0.0-20170323211221-abd1f791f5ee // indirect
 	github.com/aclements/go-moremath v0.0.0-20190503154113-f59a5491087f // indirect
 	github.com/ajstarks/deck v0.0.0-20190324184121-6fe4637ccacd // indirect

@@ -41,7 +41,7 @@ func getConn() (*grpc.ClientConn, error) {
 }
 
 func postObject(key *pb.Key, m string) error {
-	r := &pb.PostObjectRequest{Key: key, Data: []byte(m)}
+	r := &pb.CreateObjectRequest{Key: key, Data: []byte(m)}
 
 	conn, err := getConn()
 	defer func() {
@@ -55,7 +55,7 @@ func postObject(key *pb.Key, m string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := c.PostObject(ctx, r)
+	resp, err := c.CreateObject(ctx, r)
 
 	log.Printf("Post %v\n", resp)
 

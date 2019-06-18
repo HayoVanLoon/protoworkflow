@@ -29,10 +29,10 @@ def main(params):
     with grpc.insecure_channel(target) as channel:
         stub = contact_pb2_grpc.ContactStub(channel)
 
-        message = contact_pb2.PostMessageRequest()
+        message = contact_pb2.CreateMessageRequest()
         message.message = 'This does not please me.'
 
-        resp = stub.PostMessage(message, timeout=DEFAULT_TIMEOUT)
+        resp = stub.CreateMessage(message, timeout=DEFAULT_TIMEOUT)
         print(json_format.MessageToJson(resp))
 
 
