@@ -41,7 +41,7 @@ func getConn(host, port string) (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func postMessage(host, port string, m *pb.CustomerMessage) error {
+func createMessage(host, port string, m *pb.CustomerMessage) error {
 	r := &pb.CreateMessageRequest{Message: &pb.CreateMessageRequest_CustomerMessage{m}}
 
 	conn, err := getConn(host, port)
@@ -59,6 +59,7 @@ func postMessage(host, port string, m *pb.CustomerMessage) error {
 	resp, err := c.CreateMessage(ctx, r)
 
 	log.Printf("%v\n", resp)
+	log.Printf("%v\n", err)
 
 	return err
 }
@@ -88,6 +89,9 @@ func getQuestion(host, port string) error {
 	return err
 }
 
+// Makes several calls to a messaging server.
+//
+// Meant for debugging purposes.
 func main() {
 	var host = flag.String("host", defaultHost, "messaging service host")
 	var port = flag.String("port", defaultPort, "messaging service port")
@@ -104,7 +108,7 @@ func main() {
 		Sender: &contactpb.Sender{Name: "test4321"},
 	}
 
-	_ = postMessage(*host, *port, question)
-	_ = postMessage(*host, *port, complaint)
+	_ = createMessage(*host, *port, question)
+	_ = createMessage(*host, *port, complaint)
 	_ = getQuestion(*host, *port)
 }
