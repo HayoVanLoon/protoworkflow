@@ -19,6 +19,7 @@ package main
 
 import (
 	"crypto/sha1"
+	"flag"
 	"fmt"
 	"github.com/HayoVanLoon/go-commons/sorted"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
@@ -33,10 +34,10 @@ import (
 )
 
 const (
-	port     = "8080"
-	wildcard = "*"
-	sep      = "~"
-	kvSep    = "="
+	defaultPort = "8080"
+	wildcard    = "*"
+	sep         = "~"
+	kvSep       = "="
 )
 
 // alias for readability
@@ -109,19 +110,19 @@ type server struct {
 
 func newServer() *server {
 	dataMap := dataMap{
-		idxs: make(map[string]map[string]sorted.StringSet),
+		idxs:  make(map[string]map[string]sorted.StringSet),
 		items: make(map[dkey]item),
 	}
 	return &server{dataMap}
 }
 
-func (s *server) getData(key dkey) ([]byte, bool) {
+func (s *server) getData(key dkey) ([]byte, string, bool) {
 	s.data.RLock()
 	defer s.data.RUnlock()
 	if it, ok := s.data.items[key]; ok {
-		return it.data, ok
+		return it.data, getEtag(it.data), ok
 	}
-	return nil, false
+	return nil, "", false
 }
 
 func (s *server) getKeys(query []keyVal) []string {
@@ -182,7 +183,7 @@ func (s *server) addToIdxs(idx []keyVal, key dkey) {
 		if vs, ok := s.data.idxs[kv.k]; ok {
 			if ks, ok := vs[kv.v]; ok {
 				ks = ks.Add(string(key))
-				s.data.idxs[kv.k][kv.v]= ks
+				s.data.idxs[kv.k][kv.v] = ks
 			} else {
 				vs[kv.v] = sorted.NewStringSet().Add(string(key))
 				s.data.idxs[kv.k] = vs
@@ -223,72 +224,80 @@ func getEtag(data []byte) string {
 	return fmt.Sprintf("%x", bs)
 }
 
-func (s *server) mutateData(oldKey, newKey *pb.Key, oldEtag string, newData []byte) (bool, string) {
+func (s *server) mutateData(oldKey, newKey *pb.Key, oldEtag string, newData []byte) string {
 	s.data.Lock()
 	defer s.data.Unlock()
 
 	key := toKey(oldKey)
 	if it, ok := s.data.items[key]; ok {
-		if curEtag := getEtag(it.data); curEtag == oldEtag {
+		curEtag := getEtag(it.data)
+		if curEtag == oldEtag {
 			newIt := item{idx: toIdx(newKey, false), data: newData}
 			s.data.items[key] = newIt
 			s.deleteFromIdxs(toIdx(oldKey, false), key)
 			s.addToIdxs(toIdx(newKey, false), key)
-			return true, ""
+			return getEtag(newData)
 		} else {
-			return false, getEtag(it.data)
+			return ""
 		}
 	} else {
-		return false, ""
+		return ""
 	}
 }
 
 func (s *server) CreateObject(_ context.Context, req *pb.CreateObjectRequest) (*pb.CreateObjectResponse, error) {
-	key, err := s.putData(toKey(req.Key), toIdx(req.Key, false), req.Data)
-	if err != nil{
+	key, err := s.putData(toKey(req.GetKey()), toIdx(req.GetKey(), false), req.GetData())
+	if err != nil {
 		return nil, fmt.Errorf("could not store %s", key)
 	}
 	log.Printf("DEBUG: stored %s", key)
-	return &pb.CreateObjectResponse{Name: string(key)}, nil
+	return &pb.CreateObjectResponse{Name: string(key), Etag:getEtag(req.GetData())}, nil
+}
+
+type etagDataTuple struct {
+	etag string
+	data []byte
 }
 
 func (s *server) GetObject(_ context.Context, req *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {
 	// use intermediate map to prevent duplicates in result
-	result := make(map[dkey][]byte)
+	result := make(map[dkey]etagDataTuple)
 
 	for _, k := range req.Keys {
 		asKey := toKey(k)
-		if d, ok := s.getData(asKey); ok {
+		if d, e, ok := s.getData(asKey); ok {
 			// if dkey matches completely, there are no wildcards
-			result[asKey] = d
-		} else if len(k.Parts) > 0 {
+			result[asKey] = etagDataTuple{e, d}
+		} else if len(k.GetParts())+len(k.GetIndexedValues()) > 0 {
 			query := toIdx(k, true)
 			for _, k2 := range s.getKeys(query) {
-				if d, ok = s.getData(dkey(k2)); ok {
-					result[dkey(k2)] = d
+				if d, e, ok = s.getData(dkey(k2)); ok {
+					result[dkey(k2)] = etagDataTuple{e, d}
 				}
 			}
 		} else {
 			m := fmt.Sprintf("empty query")
-			log.Print(m)
+			log.Printf("%s: %v", m, *req)
 			return nil, fmt.Errorf(m)
 		}
 	}
 
-	var ks []*pb.Key
-	var ds [][]byte
-	for k, d := range result {
-		ks = append(ks, toPb(k))
-		ds = append(ds, d)
+	var es []*pb.GetObjectResponse_Entry
+	for k, ed := range result {
+		es = append(es, &pb.GetObjectResponse_Entry{
+			Key: toPb(k),
+			Etag: ed.etag,
+			Data: ed.data,
+		})
 	}
 	log.Printf("DEBUG: returned %v objects for query", len(result))
-	return &pb.GetObjectResponse{Keys: ks, Data: ds}, nil
+	return &pb.GetObjectResponse{Entries: es}, nil
 }
 
 func (s *server) DeleteObject(_ context.Context, req *pb.DeleteObjectRequest) (*empty.Empty, error) {
-	for _, k := range req.Keys {
+	for _, k := range req.GetKeys() {
 		key := toKey(k)
-		if _, ok := s.getData(key); ok {
+		if _, _, ok := s.getData(key); ok {
 			s.deleteData(key)
 			log.Printf("DEBUG: deleted %s", key)
 		}
@@ -297,17 +306,27 @@ func (s *server) DeleteObject(_ context.Context, req *pb.DeleteObjectRequest) (*
 }
 
 func (s *server) MutateObject(ctx context.Context, req *pb.MutateObjectRequest) (*pb.MutateObjectResponse, error) {
-	ok, etag := s.mutateData(req.GetOldKey(), req.GetNewKey(), req.GetOldEtag(), req.GetNewData())
-	if ok {
+	etag := s.mutateData(req.GetOldKey(), req.GetNewKey(), req.GetOldEtag(), req.GetNewData())
+	if etag != "" {
 		log.Printf("DEBUG: updated %s", toKey(req.GetOldKey()))
 	} else {
 		log.Printf("INFO: could not update %s", toKey(req.GetOldKey()))
 	}
-	return &pb.MutateObjectResponse{Success: ok, NewEtag: etag}, nil
+	return &pb.MutateObjectResponse{NewEtag: etag}, nil
+}
+
+func (s *server) GetStats(_ context.Context, req *pb.GetStatsRequest) (*pb.GetStatsResponse, error) {
+	s.data.RLock()
+	defer s.data.RUnlock()
+
+	return &pb.GetStatsResponse{NumItems: int32(len(s.data.items))}, nil
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":"+port)
+	var port = flag.String("port", defaultPort, "port to listen on")
+	flag.Parse()
+
+	lis, err := net.Listen("tcp", ":"+*port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

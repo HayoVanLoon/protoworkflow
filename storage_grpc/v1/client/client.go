@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	pb "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1"
 	"google.golang.org/grpc"
@@ -28,11 +29,11 @@ import (
 
 const (
 	host = "localhost"
-	port = 8080
+	defaultPort = "8080"
 )
 
 // Establishes a connection to the service
-func getConn() (*grpc.ClientConn, error) {
+func getConn(port string) (*grpc.ClientConn, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("%v:%v", host, port), grpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
@@ -40,10 +41,10 @@ func getConn() (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func postObject(key *pb.Key, m string) error {
+func createObject(port string, key *pb.Key, m string) error {
 	r := &pb.CreateObjectRequest{Key: key, Data: []byte(m)}
 
-	conn, err := getConn()
+	conn, err := getConn(port)
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Panicf("error closing connection: %v", err)
@@ -57,15 +58,15 @@ func postObject(key *pb.Key, m string) error {
 
 	resp, err := c.CreateObject(ctx, r)
 
-	log.Printf("Post %v\n", resp)
+	log.Printf("Create %v\n", resp)
 
 	return err
 }
 
-func getObject(key *pb.Key) error {
+func getObject(port string, key *pb.Key) error {
 	r := &pb.GetObjectRequest{Keys: []*pb.Key{key}}
 
-	conn, err := getConn()
+	conn, err := getConn(port)
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Panicf("error closing connection: %v", err)
@@ -84,10 +85,10 @@ func getObject(key *pb.Key) error {
 	return err
 }
 
-func deleteObject(key *pb.Key) error {
+func deleteObject(port string, key *pb.Key) error {
 	r := &pb.DeleteObjectRequest{Keys: []*pb.Key{key}}
 
-	conn, err := getConn()
+	conn, err := getConn(port)
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Panicf("error closing connection: %v", err)
@@ -107,7 +108,7 @@ func deleteObject(key *pb.Key) error {
 }
 
 // Fires a few requests to the service
-func examples() {
+func examples(port string) {
 	key := &pb.Key{Parts: []*pb.Key_Part{{Key: "foo", Value: "1"}, {Key: "bar", Value: "2"}}}
 	key2 := &pb.Key{Parts: []*pb.Key_Part{{Key: "foo", Value: "3"}, {Key: "bar", Value: "4"}}}
 	query := &pb.Key{IndexedValues: []*pb.Key_Part{{Key: "foo", Value: "*"}, {Key: "bar", Value: "*"}}}
@@ -139,32 +140,35 @@ func examples() {
 
 	// _ = getObject(query2)
 
-	_ = postObject(key, "bla")
-	_ = postObject(key2, "blue")
-	_ = postObject(key3, "I have lots of questions. What's the meaning of life?")
-	_ = postObject(key4, "Bananas are yellow.")
+	_ = createObject(port, key, "bla")
+	_ = createObject(port, key2, "blue")
+	_ = createObject(port, key3, "I have lots of questions. What's the meaning of life?")
+	_ = createObject(port, key4, "Bananas are yellow.")
 
-	_ = getObject(key)
-	_ = getObject(query)
+	_ = getObject(port, key)
+	_ = getObject(port, query)
 
-	_ = deleteObject(key)
+	_ = deleteObject(port, key)
 
-	_ = getObject(key2)
-	_ = getObject(query2)
+	_ = getObject(port, key2)
+	_ = getObject(port, query2)
 
 	// clean up
-	_ = deleteObject(key2)
-	_ = deleteObject(key3)
-	_ = getObject(query2)
-	_ = deleteObject(key4)
+	_ = deleteObject(port, key2)
+	_ = deleteObject(port, key3)
+	_ = getObject(port, query2)
+	_ = deleteObject(port, key4)
 }
 
 func main() {
-	examples()
+	var port = flag.String("port", defaultPort, "port to listen on")
+	flag.Parse()
+
+	examples(*port)
 	query := &pb.Key{IndexedValues: []*pb.Key_Part{
 		{Key: "category", Value: "*"},
 		{Key: "status", Value: "*"},
 	}}
 
-	_ = getObject(query)
+	_ = getObject(*port, query)
 }

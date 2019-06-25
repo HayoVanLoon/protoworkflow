@@ -143,7 +143,7 @@ func (s server) storeMessage(m *pb.CustomerMessage) (string, string, error) {
 	return resp.GetName(), resp.GetEtag(), err
 }
 
-func (s server) getMessages(cat pb.MessageCategory, st pb.Status, l int32) (msgs []*pb.CustomerMessage, err error) {
+func (s server) getMessages(cat pb.MessageCategory, st pb.Status, l int32) (msgs []*pb.CustomerMessage, etags []string, err error) {
 	query := &storagepb.Key{
 		IndexedValues: []*storagepb.Key_Part{
 			{Key: "category", Value: cat.String()},
@@ -151,16 +151,16 @@ func (s server) getMessages(cat pb.MessageCategory, st pb.Status, l int32) (msgs
 		},
 	}
 
-	r := &storagepb.GetObjectRequest{Keys: []*storagepb.Key{query}, Limit: l}
-
 	c, closeConn, err := s.getStorageClient()
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer closeConn()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	r := &storagepb.GetObjectRequest{Keys: []*storagepb.Key{query}, Limit: l}
 
 	resp, err := c.GetObject(ctx, r)
 	if err != nil {
@@ -168,25 +168,27 @@ func (s server) getMessages(cat pb.MessageCategory, st pb.Status, l int32) (msgs
 		return
 	}
 
-	for i := 0; i < len(resp.Data); i += 1 {
+	for i := 0; i < len(resp.GetEntries()); i += 1 {
+		e := resp.GetEntries()[i]
 		m := &pb.CustomerMessage{}
-		_ = proto.Unmarshal(resp.Data[i], m)
+		_ = proto.Unmarshal(e.GetData(), m)
 		msgs = append(msgs, m)
+		etags = append(etags, e.GetEtag())
 	}
 
 	return
 }
 
-func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) (bool, error) {
+func (s server) mutateMessage(oldM, newM *pb.CustomerMessage, etag string) (string, error) {
 	oldKey := createKey(oldM)
 	newKey := createKey(newM)
 
 	newData, _ := proto.Marshal(newM)
-	r := &storagepb.MutateObjectRequest{OldKey: oldKey, NewKey: newKey, OldEtag: oldM.GetEtag(), NewData: newData}
+	r := &storagepb.MutateObjectRequest{OldKey: oldKey, NewKey: newKey, OldEtag: etag, NewData: newData}
 
 	c, closeConn, err := s.getStorageClient()
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	defer closeConn()
 
@@ -196,57 +198,57 @@ func (s server) mutateMessage(oldM, newM *pb.CustomerMessage) (bool, error) {
 	resp, err := c.MutateObject(ctx, r)
 	if err != nil {
 		log.Printf("WARN: could not mutated message \"%s\"", oldM.Body)
-		return false, err
-	} else if !resp.Success {
+		return "", err
+	} else if resp.GetNewEtag() == "" {
 		log.Printf("WARN: could not mutated message \"%s\"", oldM.Body)
 	} else {
 		log.Printf("DEBUG: mutated message \"%s\"", oldM.Body)
 	}
 
-	return resp.Success, err
+	return resp.GetNewEtag(), err
 }
 
-func (s server) CreateMessage(ctx context.Context, r *pb.CreateMessageRequest) (resp *pb.CustomerMessage, err error) {
+func (s server) CreateMessage(ctx context.Context, r *pb.CreateMessageRequest) (*pb.CustomerMessage, error) {
 	m := r.GetCustomerMessage()
 	m.Status = pb.Status_TO_DO
 
 	// set category
+	var err error
 	var cat pb.MessageCategory
 	for i := -1; (err != nil || i < 0) && i < maxRetries; i += 1 {
 		cat, err = s.getCategory(m)
 	}
 	if err != nil {
 		log.Printf("WARN: could not get category: %s", err)
-		return
+		return nil, err
 	}
 	m.Category = cat
 
 	// store message
-	var name, etag string
+	var name string
 	for i := -1; (err != nil || i < 0) && i < maxRetries; i += 1 {
-		name, etag, err = s.storeMessage(m)
+		name, _, err = s.storeMessage(m)
 	}
 	if err != nil {
 		log.Printf("ERROR: error while storing message: %s", err)
-		return
+		return nil, err
 	} else if name == "" {
 		log.Printf("WARN: could not store message: %s", m.Body)
 		return nil, nil
 	}
 
 	m.Name = name
-	m.Etag = etag
 	return m, nil
 }
 
 // Claims a message.
-func (s server) claimFirst(msgs []*pb.CustomerMessage) (m *pb.CustomerMessage, err error) {
+func (s server) claimFirst(msgs []*pb.CustomerMessage, etags []string) (m *pb.CustomerMessage, newEtag string, err error) {
 	for i := 0; m == nil && i < len(msgs); i += 1 {
 		oldM := *msgs[i]
 		m = msgs[i]
 		m.Status = pb.Status_IN_PROCESS
-		ok, err := s.mutateMessage(&oldM, m)
-		if !ok || err != nil {
+		newEtag, err := s.mutateMessage(&oldM, m, etags[i])
+		if newEtag == "" || err != nil {
 			m = nil
 		}
 	}
@@ -255,7 +257,7 @@ func (s server) claimFirst(msgs []*pb.CustomerMessage) (m *pb.CustomerMessage, e
 
 func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.CustomerMessage, err error) {
 	for {
-		msgs, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO, messageLimit)
+		msgs, etags, err := s.getMessages(pb.MessageCategory_QUESTION, pb.Status_TO_DO, messageLimit)
 		if err != nil {
 			log.Printf("WARN: error retrieving messages: %s", err)
 			return nil, err
@@ -264,7 +266,7 @@ func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.C
 			break
 		}
 
-		m, err := s.claimFirst(msgs)
+		m, _, err := s.claimFirst(msgs, etags)
 		if err != nil {
 			log.Printf("WARN: error getting question: %s", err)
 			return nil, err
@@ -278,7 +280,7 @@ func (s server) GetQuestion(context.Context, *pb.GetQuestionRequest) (resp *pb.C
 
 func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.CustomerMessage, error) {
 	for {
-		msgs, err := s.getMessages(pb.MessageCategory_COMPLAINT, pb.Status_TO_DO, messageLimit)
+		msgs, etags, err := s.getMessages(pb.MessageCategory_COMPLAINT, pb.Status_TO_DO, messageLimit)
 		if err != nil {
 			log.Printf("WARN: error retrieving messages: %s", err)
 			return nil, err
@@ -287,7 +289,7 @@ func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.Cust
 			break
 		}
 
-		m, err := s.claimFirst(msgs)
+		m, _, err := s.claimFirst(msgs, etags)
 		if err != nil {
 			log.Printf("WARN: error getting question: %s", err)
 			return nil, err
@@ -301,7 +303,7 @@ func (s server) GetComplaint(context.Context, *pb.GetComplaintRequest) (*pb.Cust
 
 func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.CustomerMessage, err error) {
 	for {
-		msgs, err := s.getMessages(pb.MessageCategory_FEEDBACK, pb.Status_TO_DO, messageLimit)
+		msgs, etags, err := s.getMessages(pb.MessageCategory_FEEDBACK, pb.Status_TO_DO, messageLimit)
 		if err != nil {
 			log.Printf("WARN: error retrieving messages: %s", err)
 			return nil, err
@@ -310,7 +312,7 @@ func (s server) GetFeedback(context.Context, *pb.GetFeedbackRequest) (resp *pb.C
 			break
 		}
 
-		m, err := s.claimFirst(msgs)
+		m, _, err := s.claimFirst(msgs, etags)
 		if err != nil {
 			log.Printf("WARN: error getting question: %s", err)
 			return nil, err
@@ -350,7 +352,7 @@ func (s server) GetMessage(_ context.Context, req *pb.GetMessageRequest) (*pb.Cu
 	}
 
 	m := &pb.CustomerMessage{}
-	err = proto.Unmarshal(objResp.Data[0], m)
+	err = proto.Unmarshal(objResp.GetEntries()[0].GetData(), m)
 	if err != nil {
 		log.Printf("WARN: error unmarshalling message '%s'", key)
 		return nil, err

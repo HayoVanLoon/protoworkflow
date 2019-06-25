@@ -39,21 +39,20 @@ class ContactServer(contact_pb2_grpc.ContactServicer):
         self.messaging_target = messaging_host + ':' + str(messaging_port)
 
     def CreateMessage(self, request, context):
-        message_req = messaging_pb2.PostMessageRequest()
+        message_req = messaging_pb2.CreateMessageRequest()
         message_req.customer_message.body = request.message
-        message_req.customer_message.sender.name = 'foo_name'
-        message_req.customer_message.sender.email = 'foo@example.com'
-        message_req.customer_message.sender.name = 'Foo Bar'
-        message_req.customer_message.sender.name = 'Mrs.'
+        message_req.customer_message.sender.name = request.sender.name
+        message_req.customer_message.sender.email = request.sender.email
+        message_req.customer_message.timestamp = int(time.time() * 1000)
 
-        resp = contact_pb2.PostMessageResponse()
+        resp = contact_pb2.CreateMessageRequest()
 
         with grpc.insecure_channel(self.messaging_target) as channel:
             stub = messaging_pb2_grpc.MessagingStub(channel)
 
             try:
-                message_resp = stub.PostMessage(message_req,
-                                                timeout=DEFAULT_TIMEOUT)
+                message_resp = stub.CreateMessage(message_req,
+                                                  timeout=DEFAULT_TIMEOUT)
             except Exception as ex:
                 LOGGER.warning(ex)
 

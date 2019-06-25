@@ -59,7 +59,9 @@ func createMessage(host, port string, m *pb.CustomerMessage) error {
 	resp, err := c.CreateMessage(ctx, r)
 
 	log.Printf("%v\n", resp)
-	log.Printf("%v\n", err)
+	if err != nil {
+		log.Printf("%v\n", err)
+	}
 
 	return err
 }

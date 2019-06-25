@@ -5,8 +5,6 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/HayoVanLoon/go-commons v0.0.0-20190504135409-6a681c7497de h1:M6iQ0Y4RuawoVDEFGStei1mfy9CzgAHDmkXUa4UYR1g=
 github.com/HayoVanLoon/go-commons v0.0.0-20190504135409-6a681c7497de/go.mod h1:nghygoXFiMuK7Gen04EPI0ihTr3ZaHFpCPMw7B49TPQ=
-github.com/HayoVanLoon/protoworkflow-genproto v0.0.0-20190618135346-ed3f6cd1fbce h1:BgGyDOAGDaiormQ4Am9HwqBHIThvpVMqPxhkstlldUQ=
-github.com/HayoVanLoon/protoworkflow-genproto v0.0.0-20190618135346-ed3f6cd1fbce/go.mod h1:WHav/XuEIKE8MDHe+cCbmOWnFl2sNu/PMbfb/SLDeOc=
 github.com/aclements/go-gg v0.0.0-20170323211221-abd1f791f5ee/go.mod h1:55qNq4vcpkIuHowELi5C8e+1yUHtoLoOUR9QU5j7Tes=
 github.com/aclements/go-moremath v0.0.0-20190503154113-f59a5491087f/go.mod h1:idZL3yvz4kzx1dsBOAC+oYv6L92P1oFEhUXUB1A/lwQ=
 github.com/ajstarks/deck v0.0.0-20190324184121-6fe4637ccacd/go.mod h1:j3f/59diR4DorW5A78eDYvRkdrkh+nps4p5LA1Tl05U=

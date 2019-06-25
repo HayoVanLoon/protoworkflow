@@ -67,8 +67,11 @@ test: clean protoc
 #	$(VENV); pytest
 	@echo TODO
 
-build:
-	docker build -t $(IMAGE_NAME) .
+build: build-python-grpc
+	docker build -f Dockerfile-partial-build -t $(IMAGE_NAME) .
+
+build-python-grpc:
+	docker build -f Dockerfile-python-grpc -t python-grpc .
 
 run:
 	$(VENV); python contact_server.py
