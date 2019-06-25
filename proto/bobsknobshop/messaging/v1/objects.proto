@@ -46,10 +46,6 @@ message CustomerMessage {
 
     // Message handling status.
     Status status = 6;
-
-    // Message Etag
-    // Output only
-    string etag = 10;
 }
 
 

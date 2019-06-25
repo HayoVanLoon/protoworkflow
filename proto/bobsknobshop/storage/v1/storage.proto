@@ -24,7 +24,7 @@ import "google/api/annotations.proto";
 
 option java_multiple_files = true;
 option java_package = "gl.bobsknobshop.storage.v1";
-option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1;storage";
 
 
 // A service acting as a (proxy for) data storage.
@@ -44,10 +44,15 @@ service Storage {
     rpc DeleteObject(DeleteObjectRequest) returns (google.protobuf.Empty) {
     }
 
-    // Mutates an object, but only when its current state matches with the
-    // request state.
-    // If the state check fails, a current version of the object is returned.
+    // Mutates an object, but only when its current etag matches the provided
+    // etag.
+    // If this check fails or the item does not exist, an empty string is
+    // returned.
     rpc MutateObject(MutateObjectRequest) returns (MutateObjectResponse) {
+    }
+
+    // Produces some stats on storage
+    rpc GetStats(GetStatsRequest) returns (GetStatsResponse) {
     }
 }
 
@@ -67,6 +72,7 @@ message CreateObjectResponse {
     // Name by which object is stored.
     string name = 1;
 
+    // The object's etag, calculated over the object data
     string etag = 2;
 }
 
@@ -84,14 +90,19 @@ message GetObjectRequest {
 
 message GetObjectResponse {
 
-    // Keys of found objects.
-    // May be smaller than keys in request.
-    // Indexes match data list elements
-    repeated Key keys = 1;
+    repeated Entry  entries = 1;
 
-    // Data matching keys.
-    // Indexes match keys list elements
-    repeated bytes data = 2;
+    message Entry {
+
+        // The object's key
+        Key key = 1;
+
+        // The object's etag, calculated over the data
+        string etag = 2;
+
+        // The data
+        bytes data = 3;
+    }
 }
 
 
@@ -112,20 +123,29 @@ message MutateObjectRequest {
 
 
 message MutateObjectResponse {
-    bool success = 1;
     string new_etag = 2;
+}
+
+
+message GetStatsRequest {
+}
+
+
+message GetStatsResponse {
+    int32 num_items = 1;
 }
 
 
 message Key {
 
     // Name by which object is stored.
-    // Not used when posting new objects
+    // Output only
     string name = 1;
 
     // A key consists of a list of key-values.
     repeated Part parts = 2;
 
+    // Additional search keys
     repeated Part indexed_values = 3;
 
     message Part {
