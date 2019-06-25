@@ -1,0 +1,85 @@
+<!--
+  ~ Copyright 2019 Hayo van Loon
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ProtoWorkflow</title>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" href="static/css/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</head>
+<body>
+
+<nav>
+    <div class="nav-wrapper">
+        <a href="#" class="brand-logo">ProtoWorkflow</a>
+        <ul id="nav-mobile" class="right hide-on-med-and-down">
+            <li><a href="#">link</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+        <div class="col s12 m6">
+            <form action="/contact" method="post">
+                <div class="input-field">
+                    <label for="sender-input">Sender</label>
+                    <input type="text" name="sender" id="sender-input">
+                </div>
+                <div class="input-field">
+                    <label for="message-input">Message</label>
+                    <input type="text" name="message" id="message-input">
+                </div>
+                <div class="input-field">
+                    <label for="product-id-input">Product ID</label>
+                    <input type="text" name="product-id" id="product-id-input">
+                </div>
+                <input class="btn btn-large" type="submit" value="Submit">
+            </form>
+        </div>
+        <div class="col s12 m6">
+            <div class="row">
+                <div class="col s12">
+                    <a href="/storage-stats" target="_blank" class="btn btn-large">Storage Stats</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <a href="/question" target="_blank" class="btn btn-large">Get Question</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <a href="/complaint" target="_blank" class="btn btn-large">Get Complaint</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <a href="/feedback" target="_blank" class="btn btn-large">Get Feedback</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

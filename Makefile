@@ -71,3 +71,7 @@ run-storage:
 
 docker-run-storage:
 	@$(MAKE) -C storage_grpc docker-run
+
+# Frontend Server
+run-frontend:
+	@$(MAKE) -C frontend_app run
