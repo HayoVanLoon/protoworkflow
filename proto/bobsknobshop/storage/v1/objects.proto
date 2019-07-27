@@ -1,0 +1,64 @@
+/*
+ * Copyright 2019 Hayo van Loon
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+syntax = "proto3";
+
+package bobsknobshop.storage.v1;
+
+option java_multiple_files = true;
+option java_package = "gl.bobsknobshop.storage.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/storage/v1;storage";
+
+
+message StoredObject {
+
+    string name = 2;
+
+    string etag = 3;
+
+    // Key to store data by.
+    Key key = 4;
+
+    // Data to store.
+    bytes data = 5;
+}
+
+
+message Key {
+
+    // Name by which object is stored.
+    // Output only
+    string name = 1;
+
+    // A key consists of a list of key-values.
+    repeated Part parts = 2;
+
+    // Additional search keys
+    repeated Part indexed_values = 3;
+
+    message Part {
+
+        // Must not contain '=' or '~'
+        string key = 1;
+
+        // The wildcard character '*' is reserved and may not be used when
+        // storing values.
+        // Can be set to the wildcard character '*' in queries.
+        // Must not contain '=' or '~'
+        string value = 2;
+    }
+}

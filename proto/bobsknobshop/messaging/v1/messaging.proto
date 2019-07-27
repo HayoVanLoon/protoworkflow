@@ -37,34 +37,16 @@ service Messaging {
     rpc CreateMessage(CreateMessageRequest) returns (CustomerMessage) {
     }
 
-    // Retrieves an open question.
-    // The message status will be set to IN_PROCESS.
-    rpc GetQuestion(GetQuestionRequest) returns (CustomerMessage) {
-    }
-
-    // Retrieves an open complaint.
-    // The message status will be set to IN_PROCESS.
-    rpc GetComplaint(GetComplaintRequest) returns (CustomerMessage) {
-    }
-
-    // Retrieves an open feedback message.
-    // The message status will be set to IN_PROCESS.
-    rpc GetFeedback(GetFeedbackRequest) returns (CustomerMessage) {
-    }
-
-    // Moves a message to a different category.
-    // The message status will be reset to TO_DO.
-    rpc MoveMessage(MoveMessageRequest) returns (CustomerMessage) {
-    }
-
-    // Updates a message status.
-    // If the message does not exist (because it was removed), this action will
-    // fail.
-    rpc UpdateStatus(UpdateStatusRequest) returns (CustomerMessage) {
-    }
-
     // Retrieves a message by its name.
     rpc GetMessage(GetMessageRequest) returns (CustomerMessage) {
+    }
+
+    // Updates a message.
+    rpc UpdateMessage(UpdateMessageRequest) returns (CustomerMessage) {
+}
+
+    // Permanently deletes a message.
+    rpc DeleteMessage(DeleteMessageRequest) returns (google.protobuf.Empty) {
     }
 
     // Searches for messages matching the query.
@@ -72,8 +54,9 @@ service Messaging {
     rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse) {
     }
 
-    // Permanently deletes a message.
-    rpc DeleteMessage(DeleteMessageRequest) returns (google.protobuf.Empty) {
+    // Moves a message to a different category.
+    // The message status will be reset to TO_DO.
+    rpc MoveMessage(MoveMessageRequest) returns (CustomerMessage) {
     }
 }
 
@@ -87,60 +70,23 @@ message CreateMessageRequest {
 }
 
 
-message GetQuestionRequest {
-}
-
-
-message GetQuestionResponse {
-
-    // An unprocessed question.
-    oneof message {
-        CustomerMessage customer_message = 1;
-    }
-}
-
-
-message GetComplaintRequest {
-}
-
-
-message GetFeedbackRequest {
-}
-
-
-
-message MoveMessageRequest {
-
-    // The message to move.
-    string message_id = 1;
-
-    // Move message out of this category bucket.
-    // If the message does not have this category, this request will fail.
-    MessageCategory old_category = 2;
-
-    // Move message to this category bucket.
-    MessageCategory new_category = 3;
-}
-
-
-message UpdateStatusRequest {
-
-    // The message to update the status for.
-    string message = 1;
-
-    // If the message does not have this status, this request will fail.
-    Status old_status = 2;
-
-    // The new status.
-    Status new_status = 3;
-}
-
-
-
 message GetMessageRequest {
+
     string name = 1;
 }
 
+
+message UpdateMessageRequest {
+
+    CustomerMessage message = 1;
+}
+
+
+message DeleteMessageRequest {
+
+    // The message id.
+    string name = 1;
+}
 
 
 // A message for searching messages using a query.
@@ -168,8 +114,15 @@ message SearchMessagesResponse {
 }
 
 
-message DeleteMessageRequest {
+message MoveMessageRequest {
 
-    // The message id.
-    string name = 1;
+    // The message to move.
+    string message_id = 1;
+
+    // Move message out of this category bucket.
+    // If the message does not have this category, this request will fail.
+    MessageCategory old_category = 2;
+
+    // Move message to this category bucket.
+    MessageCategory new_category = 3;
 }

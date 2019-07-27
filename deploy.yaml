@@ -139,6 +139,7 @@ metadata:
 spec:
   selector:
     app: storage
+  type: NodePort
   ports:
     - protocol: TCP
       port: 8080

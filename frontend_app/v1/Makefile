@@ -42,7 +42,9 @@ run:
 		-contact-host=$(shell minikube ip) \
 		-contact-port=30000 \
 		-messaging-host=$(shell minikube ip) \
-		-messaging-port=30010
+		-messaging-port=30010 \
+		-storage-host=$(shell minikube ip) \
+		-storage-port=30020
 
 docker-run:
 	docker run --network="host" $(IMAGE_NAME) \

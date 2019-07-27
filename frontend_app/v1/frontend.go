@@ -32,15 +32,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	contactService = "contact-service"
+	contactService   = "contact-service"
 	messagingService = "messaging-service"
-	storageService = "storage-service"
-	defaultPort    = "8080"
+	storageService   = "storage-service"
+	defaultPort      = 8080
 )
 
 type static struct {
@@ -56,6 +57,8 @@ func newStatic(file string) static {
 	ext := xs[len(xs)-1]
 	if ext == "css" {
 		return static{"text/css", data}
+	} else if ext == "js" {
+		return static{"application/javascript", data}
 	} else {
 		return static{"text/html", []byte("")}
 	}
@@ -253,7 +256,7 @@ func getQuestionHandlerFn(host, port string) func(http.ResponseWriter, *http.Req
 
 		resp, err := c.GetQuestion(ctx, m)
 		if err != nil {
-			log.Printf("error calling SearchMessages %v", err)
+			log.Printf("error calling GetQuestion %v", err)
 			w.WriteHeader(500)
 			return
 		}
@@ -281,7 +284,7 @@ func getComplaintHandlerFn(host, port string) func(http.ResponseWriter, *http.Re
 
 		resp, err := c.GetComplaint(ctx, m)
 		if err != nil {
-			log.Printf("error calling SearchMessages %v", err)
+			log.Printf("error calling GetComplaint %v", err)
 			w.WriteHeader(500)
 			return
 		}
@@ -309,7 +312,7 @@ func getFeedbackHandlerFn(host, port string) func(http.ResponseWriter, *http.Req
 
 		resp, err := c.GetFeedback(ctx, m)
 		if err != nil {
-			log.Printf("error calling SearchMessages %v", err)
+			log.Printf("error calling GetFeedback %v", err)
 			w.WriteHeader(500)
 			return
 		}
@@ -337,7 +340,7 @@ func getStorageStatsHandlerFn(host, port string) func(http.ResponseWriter, *http
 
 		resp, err := c.GetStats(ctx, m)
 		if err != nil {
-			log.Printf("error calling SearchMessages %v", err)
+			log.Printf("error calling GetStorageStats %v", err)
 			w.WriteHeader(500)
 			return
 		}
@@ -349,23 +352,23 @@ func getStorageStatsHandlerFn(host, port string) func(http.ResponseWriter, *http
 }
 
 func main() {
-	var port = flag.String("port", defaultPort, "port to listen on")
+	var port = flag.Int("port", defaultPort, "port to listen on")
 	var contactHost = flag.String("contact-host", contactService, "contact service")
-	var contactPort = flag.String("contact-port", defaultPort, "contact service port")
+	var contactPort = flag.Int("contact-port", defaultPort, "contact service port")
 	var messagingHost = flag.String("messaging-host", messagingService, "messaging service")
-	var messagingPort = flag.String("messaging-port", defaultPort, "messaging service port")
+	var messagingPort = flag.Int("messaging-port", defaultPort, "messaging service port")
 	var storageHost = flag.String("storage-host", storageService, "storage service")
-	var storagePort = flag.String("storage-port", defaultPort, "storage service port")
+	var storagePort = flag.Int("storage-port", defaultPort, "storage service port")
 	flag.Parse()
 
 	http.HandleFunc("/", handler)
-	http.HandleFunc("/contact", contactHandlerFn(*contactHost, *contactPort))
+	http.HandleFunc("/contact", contactHandlerFn(*contactHost, strconv.Itoa(*contactPort)))
 	// http.HandleFunc("/messages", messagesHandlerFn(*messagingHost, *messagingPort))
-	http.HandleFunc("/question", getQuestionHandlerFn(*messagingHost, *messagingPort))
-	http.HandleFunc("/complaint", getComplaintHandlerFn(*messagingHost, *messagingPort))
-	http.HandleFunc("/feedback", getFeedbackHandlerFn(*messagingHost, *messagingPort))
-	http.HandleFunc("/storage-stats", getStorageStatsHandlerFn(*storageHost, *storagePort))
+	http.HandleFunc("/question", getQuestionHandlerFn(*messagingHost, strconv.Itoa(*messagingPort)))
+	http.HandleFunc("/complaint", getComplaintHandlerFn(*messagingHost, strconv.Itoa(*messagingPort)))
+	http.HandleFunc("/feedback", getFeedbackHandlerFn(*messagingHost, strconv.Itoa(*messagingPort)))
+	http.HandleFunc("/storage-stats", getStorageStatsHandlerFn(*storageHost, strconv.Itoa(*storagePort)))
 	http.HandleFunc("/static/", staticHandler)
 
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }

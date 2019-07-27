@@ -40,46 +40,75 @@
 <div class="container">
     <div class="row">
         <div class="col s12 m6">
-            <form action="/contact" method="post">
-                <div class="input-field">
-                    <label for="sender-input">Sender</label>
-                    <input type="text" name="sender" id="sender-input">
+            <div class="row">
+                <div class="col s12">
+                    <div class="input-field">
+                        <label for="sender-input">Sender</label>
+                        <input type="text" name="sender" id="sender-input">
+                    </div>
+                    <div class="input-field">
+                        <label for="message-input">Message</label>
+                        <input type="text" name="message"
+                               id="message-input">
+                    </div>
+                    <div class="input-field">
+                        <label for="product-id-input">Product ID</label>
+                        <input type="text" name="product-id"
+                               id="product-id-input">
+                    </div>
+                    <a class="btn btn-large" type="submit"
+                       id="message-submit">Submit</a>
                 </div>
-                <div class="input-field">
-                    <label for="message-input">Message</label>
-                    <input type="text" name="message" id="message-input">
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <span id="message-submit-span"></span>
                 </div>
-                <div class="input-field">
-                    <label for="product-id-input">Product ID</label>
-                    <input type="text" name="product-id" id="product-id-input">
-                </div>
-                <input class="btn btn-large" type="submit" value="Submit">
-            </form>
+            </div>
         </div>
         <div class="col s12 m6">
             <div class="row">
-                <div class="col s12">
-                    <a href="/storage-stats" target="_blank" class="btn btn-large">Storage Stats</a>
+                <div class="col s6">
+                    <a id="storage-stats-btn" target="_blank"
+                       class="btn btn-large">Storage Stats</a>
+                </div>
+                <div class="col s6">
+                    <span id="storage-stats-span"></span>
                 </div>
             </div>
             <div class="row">
                 <div class="col s12">
-                    <a href="/question" target="_blank" class="btn btn-large">Get Question</a>
+                    <a id="question-btn" target="_blank" class="btn btn-large">Get
+                        Question</a>
+                </div>
+                <div class="col s6">
+                    <span id="question-span"></span>
                 </div>
             </div>
             <div class="row">
                 <div class="col s12">
-                    <a href="/complaint" target="_blank" class="btn btn-large">Get Complaint</a>
+                    <a id="complaint-btn" target="_blank" class="btn btn-large">Get
+                        Complaint</a>
+                </div>
+                <div class="col s6">
+                    <span id="complaint-span"></span>
                 </div>
             </div>
             <div class="row">
                 <div class="col s12">
-                    <a href="/feedback" target="_blank" class="btn btn-large">Get Feedback</a>
+                    <a id="feedback-btn" target="_blank" class="btn btn-large">Get
+                        Feedback</a>
+                </div>
+                <div class="col s6">
+                    <span id="feedback-span"></span>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script type="application/javascript" src="/static/js/utils.js"></script>
+<script type="application/javascript" src="/static/js/main.js"></script>
 
 </body>
 </html>

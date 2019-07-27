@@ -14,11 +14,11 @@
 
 protoc:
 	$(MAKE) -C proto protoc-go
-	$(MAKE) -C contact_grpc protoc
+	$(MAKE) -C customers_grpc protoc
 
 test: protoc
 	$(MAKE) -C categorising_grpc test
-	$(MAKE) -C contact_grpc test
+	$(MAKE) -C customers_grpc test
 	$(MAKE) -C messaging_grpc test
 	$(MAKE) -C storage_grpc test
 
@@ -27,16 +27,16 @@ build: test build-categorising build-contact build-messaging build-storage
 
 # Contact gRPC Server
 build-contact:
-	$(MAKE) -C contact_grpc build
+	$(MAKE) -C customers_grpc build
 
 run-contact:
-	@$(MAKE) -C contact_grpc run
+	@$(MAKE) -C customers_grpc run
 
 docker-run-contact:
-	@$(MAKE) -C contact_grpc docker-run
+	@$(MAKE) -C customers_grpc docker-run
 
 test-minikube-contact:
-	@$(MAKE) -C contact_grpc test-minikube
+	@$(MAKE) -C customers_grpc test-minikube
 
 # Categorising gRPC Server
 build-categorising:

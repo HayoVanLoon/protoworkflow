@@ -13,7 +13,7 @@
 # limitations under the License.
 
 PROJECT_NAME := protoworkflow
-MODULE_NAME := contact
+MODULE_NAME := customers
 
 # Docker-related
 IMAGE_NAME := $(PROJECT_NAME)_$(MODULE_NAME)_grpc
@@ -74,14 +74,14 @@ build-python-grpc:
 	docker build -f Dockerfile-python-grpc -t python-grpc .
 
 run:
-	$(VENV); python contact_server.py
+	$(VENV); python server.py
 
 docker-run:
 	docker run --network="host" $(IMAGE_NAME) \
-		/usr/bin/python3 contact_server.py \
+		/usr/bin/python3 server.py \
 		--port=8083 \
 		--messaging_host=localhost \
 		--messaging_port=8082
 
 test-minikube:
-	$(VENV); python contact_client.py --host=$(shell minikube ip) --port=30000
+	$(VENV); python client.py --host=$(shell minikube ip) --port=30000

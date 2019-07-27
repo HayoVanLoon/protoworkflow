@@ -19,7 +19,7 @@ syntax = "proto3";
 
 package bobsknobshop.messaging.v1;
 
-import "bobsknobshop/contact/v1/objects.proto";
+import "bobsknobshop/customers/v1/objects.proto";
 
 option java_multiple_files = true;
 option java_package = "gl.bobsknobshop.messaging.v1";
@@ -29,23 +29,26 @@ option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/
 // A message sent by a customer or prospect.
 message CustomerMessage {
 
-    // message id
-    string name = 1;
+    // Message UUID
+    // Output only
+    string name = 2;
+
+    oneof sender {
+
+        string sender_name = 10;
+
+        // A known customer.
+        customers.v1.Customer customer = 11;
+    }
+
+    // Message topic
+    string topic = 3;
 
     // The message text.
-    string body = 2;
+    string body = 4;
 
     // Timestamp when message was first received.
-    int64 timestamp = 3;
-
-    // The customer.
-    contact.v1.Sender sender = 4;
-
-    // Message category implying course of action.
-    MessageCategory category = 5;
-
-    // Message handling status.
-    Status status = 6;
+    int64 timestamp = 5;
 }
 
 

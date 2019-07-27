@@ -17,34 +17,26 @@
 
 syntax = "proto3";
 
-package bobsknobshop.contact.v1;
+package bobsknobshop.messaging.v1;
 
 import "google/api/annotations.proto";
-import "google/protobuf/empty.proto";
-import "bobsknobshop/contact/v1/objects.proto";
+
+import "bobsknobshop/messaging/v1/objects.proto";
 
 option java_multiple_files = true;
-option java_package = "gl.bobsknobshop.contact.v1";
-option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/contact/v1;contact";
+option java_package = "gl.bobsknobshop.complaints.v1";
+option go_package = "github.com/HayoVanLoon/protoworkflow-genproto/bobsknobshop/complaints/v1;complaints";
 
 
-// A user-facing service for requests related to contacting the company.
-service Contact {
+// A service acting as a hub for messaging workflows.
+service Complaints {
 
-    // Stores a new message.
-    rpc CreateMessage(CreateMessageRequest) returns (google.protobuf.Empty) {
+    // Retrieves an open complaint.
+    // The message status will be set to IN_PROCESS.
+    rpc GetComplaint(GetComplaintRequest) returns (CustomerMessage) {
     }
 }
 
 
-message CreateMessageRequest {
-
-    // The message text.
-    string message = 1;
-
-    // The person sending the message.
-    Sender sender = 2;
-
-    // The product id (optional).
-    string product_id = 3;
+message GetComplaintRequest {
 }
